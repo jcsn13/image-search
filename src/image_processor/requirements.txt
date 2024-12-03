@@ -1,0 +1,6 @@
+google-cloud-storage>=2.0.0
+google-cloud-aiplatform>=1.25.0
+vertexai>=0.0.1
+Pillow>=9.0.0
+numpy>=1.21.0
+functions-framework>=3.0.0
