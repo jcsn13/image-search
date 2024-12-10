@@ -62,3 +62,13 @@ resource "google_project_iam_member" "functions_permissions" {
   role    = each.key
   member  = "serviceAccount:service-${var.project_number}@gcf-admin-robot.iam.gserviceaccount.com"
 }
+
+resource "google_project_iam_member" "eventarc_service_agent" {
+  project = var.project_id
+  role    = "roles/eventarc.serviceAgent"
+  member  = "serviceAccount:service-${var.project_number}@gcp-sa-eventarc.iam.gserviceaccount.com"
+}
+
+output "eventarc_service_agent" {
+  value = google_project_iam_member.eventarc_service_agent
+}
