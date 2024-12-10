@@ -5,10 +5,10 @@ variable "region" {
 
 variable "project_id" {
   type    = string
-  default = "image-search-442921"
+  default = "pedradacebola"
 }
 
 variable "project_number" {
   type    = number
-  default = 568765568192
+  default = 313506374999
 }
