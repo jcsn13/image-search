@@ -15,7 +15,6 @@ As seguintes APIs precisam ser habilitadas no projeto Google Cloud. O código Te
 *   **Container Registry:** `containerregistry.googleapis.com`
 *   **Service Networking:**  `servicenetworking.googleapis.com`
 *   **Vertex AI:** `vertexai.googleapis.com`
-*   *e outras APIs relacionadas aos serviços utilizados*
 
 ## 2. Configuração de Permissões IAM
 
