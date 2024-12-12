@@ -76,7 +76,7 @@ resource "google_project_iam_member" "eventarc_service_agent" {
 }
 
 resource "google_project_iam_member" "gcs_pubsub_publishing" {
-  project = "image-search-442921"
+  project = var.project_id
   role    = "roles/pubsub.publisher"
   member  = "serviceAccount:service-${var.project_number}@gs-project-accounts.iam.gserviceaccount.com"
 }
