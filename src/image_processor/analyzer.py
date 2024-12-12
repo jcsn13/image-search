@@ -12,7 +12,7 @@
  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  See the License for the specific language governing permissions and
  limitations under the License.
- """
+"""
 
 import vertexai
 from vertexai.generative_models import GenerativeModel, Part
@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from typing import List
 import os
 from PIL import Image
+import io
 
 @dataclass
 class ImageAnalysis:
@@ -51,33 +52,36 @@ class GeminiImageAnalyzer:
         Returns:
             ImageAnalysis object containing analysis results
         """
-        image = Image.open(image_path)
+        # Open and convert image to bytes
+        with Image.open(image_path) as img:
+            # Convert image to RGB if it's not
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+            
+            # Convert to bytes
+            img_byte_arr = io.BytesIO()
+            img.save(img_byte_arr, format='PNG')
+            img_byte_arr = img_byte_arr.getvalue()
         
         # Generate context description
-        context_response = self.model.generate_content(
-            [
-                "Provide a detailed description of this image's context and scene in 2-3 sentences.",
-                Part.from_image(image)
-            ]
-        )
+        context_response = self.model.generate_content([
+            "Provide a detailed description of this image's context and scene in 2-3 sentences.",
+            Part.from_data(img_byte_arr, mime_type="image/png")
+        ])
         context_description = context_response.text
         
         # Generate visual characteristics
-        visual_response = self.model.generate_content(
-            [
-                "List the key visual characteristics including colors, lighting, composition, and style. Provide as comma-separated list.",
-                Part.from_image(image)
-            ]
-        )
+        visual_response = self.model.generate_content([
+            "List the key visual characteristics including colors, lighting, composition, and style. Provide as comma-separated list.",
+            Part.from_data(img_byte_arr, mime_type="image/png")
+        ])
         visual_characteristics = visual_response.text
         
         # Generate object annotations
-        object_response = self.model.generate_content(
-            [
-                "List the main objects and elements visible in this image. Provide as comma-separated list.",
-                Part.from_image(image)
-            ]
-        )
+        object_response = self.model.generate_content([
+            "List the main objects and elements visible in this image. Provide as comma-separated list.",
+            Part.from_data(img_byte_arr, mime_type="image/png")
+        ])
         object_annotations = [obj.strip() for obj in object_response.text.split(',')]
         
         return ImageAnalysis(

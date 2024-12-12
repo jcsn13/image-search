@@ -12,24 +12,23 @@
  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  See the License for the specific language governing permissions and
  limitations under the License.
- """
+"""
 
 import vertexai
-from vertexai.vision_models import MultiModalEmbeddingModel
+from vertexai.vision_models import Image, MultiModalEmbeddingModel
 import numpy as np
 from typing import Optional
-import base64
-from PIL import Image
+import os
 
 class EmbeddingGenerator:
     def __init__(self):
         """Initialize multimodal embedding model"""
+        self.project_id = os.environ.get('PROJECT_ID')
+        self.location = os.environ.get('REGION')
+        
         # Initialize Vertex AI
-        self.model = MultiModalEmbeddingModel.from_pretrained("multimodalembedding@001")
-    
-    def _encode_image(self, image_path: str) -> Image:
-        """Load image from path"""
-        return Image.open(image_path)
+        vertexai.init(project=self.project_id, location=self.location)
+        self.model = MultiModalEmbeddingModel.from_pretrained("multimodalembedding")
     
     def generate_embedding(
         self,
@@ -46,17 +45,18 @@ class EmbeddingGenerator:
         Returns:
             Normalized embedding vector
         """
-        # Load image
-        image = self._encode_image(image_path)
+        # Load image using Vertex AI Image class
+        image = Image.load_from_file(image_path)
         
         # Get embedding from model
-        embedding = self.model.get_embeddings(
+        embeddings = self.model.get_embeddings(
             image=image,
-            text=text_context if text_context else ""
+            contextual_text=text_context if text_context else "",
+            dimension=1408
         )
         
         # Convert to numpy and normalize
-        embedding_array = np.array(embedding.image_embedding)
+        embedding_array = np.array(embeddings.image_embedding)
         normalized_embedding = embedding_array / np.linalg.norm(embedding_array)
         
         return normalized_embedding
