@@ -55,7 +55,8 @@ resource "google_project_iam_member" "functions_permissions" {
   for_each = toset([
     "roles/cloudfunctions.serviceAgent",
     "roles/iam.serviceAccountUser",
-    "roles/run.serviceAgent"
+    "roles/run.serviceAgent",
+    "roles/pubsub.publisher"
   ])
   
   project = var.project_id
@@ -64,11 +65,18 @@ resource "google_project_iam_member" "functions_permissions" {
 }
 
 resource "google_project_iam_member" "eventarc_service_agent" {
+  for_each = toset([
+    "roles/eventarc.serviceAgent",
+    "roles/pubsub.publisher"
+  ])
+
   project = var.project_id
-  role    = "roles/eventarc.serviceAgent"
+  role    = each.key
   member  = "serviceAccount:service-${var.project_number}@gcp-sa-eventarc.iam.gserviceaccount.com"
 }
 
-output "eventarc_service_agent" {
-  value = google_project_iam_member.eventarc_service_agent
+resource "google_project_iam_member" "gcs_pubsub_publishing" {
+  project = "image-search-442921"
+  role    = "roles/pubsub.publisher"
+  member  = "serviceAccount:service-${var.project_number}@gs-project-accounts.iam.gserviceaccount.com"
 }

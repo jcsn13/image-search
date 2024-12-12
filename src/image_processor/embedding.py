@@ -14,22 +14,22 @@
  limitations under the License.
  """
 
-from google.cloud import aiplatform
+import vertexai
+from vertexai.vision_models import MultiModalEmbeddingModel
 import numpy as np
 from typing import Optional
 import base64
+from PIL import Image
 
 class EmbeddingGenerator:
     def __init__(self):
         """Initialize multimodal embedding model"""
-        self.model = aiplatform.MultimodalEmbeddingModel.from_pretrained(
-            "multimodal-embedding@001"
-        )
+        # Initialize Vertex AI
+        self.model = MultiModalEmbeddingModel.from_pretrained("multimodalembedding@001")
     
-    def _encode_image(self, image_path: str) -> str:
-        """Convert image to base64"""
-        with open(image_path, "rb") as image_file:
-            return base64.b64encode(image_file.read()).decode()
+    def _encode_image(self, image_path: str) -> Image:
+        """Load image from path"""
+        return Image.open(image_path)
     
     def generate_embedding(
         self,
@@ -46,12 +46,12 @@ class EmbeddingGenerator:
         Returns:
             Normalized embedding vector
         """
-        # Encode image
-        image_bytes = self._encode_image(image_path)
+        # Load image
+        image = self._encode_image(image_path)
         
         # Get embedding from model
         embedding = self.model.get_embeddings(
-            image=image_bytes,
+            image=image,
             text=text_context if text_context else ""
         )
         

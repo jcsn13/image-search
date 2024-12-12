@@ -38,7 +38,7 @@ resource "google_cloudfunctions2_function" "image_processor" {
   description = "Function to process images using Gemini and generate embeddings"
 
   build_config {
-    runtime     = "python39"
+    runtime     = "python311"
     entry_point = "process_image"
     source {
       storage_source {

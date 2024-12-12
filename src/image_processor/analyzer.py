@@ -14,8 +14,8 @@
  limitations under the License.
  """
 
-from google.cloud import aiplatform
-from vertexai.preview import generative_models
+import vertexai
+from vertexai.generative_models import GenerativeModel, Part
 from dataclasses import dataclass
 from typing import List
 import os
@@ -39,7 +39,7 @@ class ImageAnalysis:
 class GeminiImageAnalyzer:
     def __init__(self):
         """Initialize Gemini model"""
-        self.model = generative_models.GenerativeModel('gemini-pro-vision')
+        self.model = GenerativeModel('gemini-pro-vision')
     
     def analyze_image(self, image_path: str) -> ImageAnalysis:
         """
@@ -54,24 +54,30 @@ class GeminiImageAnalyzer:
         image = Image.open(image_path)
         
         # Generate context description
-        context_response = self.model.generate_content([
-            "Provide a detailed description of this image's context and scene in 2-3 sentences.",
-            image
-        ])
+        context_response = self.model.generate_content(
+            [
+                "Provide a detailed description of this image's context and scene in 2-3 sentences.",
+                Part.from_image(image)
+            ]
+        )
         context_description = context_response.text
         
         # Generate visual characteristics
-        visual_response = self.model.generate_content([
-            "List the key visual characteristics including colors, lighting, composition, and style. Provide as comma-separated list.",
-            image
-        ])
+        visual_response = self.model.generate_content(
+            [
+                "List the key visual characteristics including colors, lighting, composition, and style. Provide as comma-separated list.",
+                Part.from_image(image)
+            ]
+        )
         visual_characteristics = visual_response.text
         
         # Generate object annotations
-        object_response = self.model.generate_content([
-            "List the main objects and elements visible in this image. Provide as comma-separated list.",
-            image
-        ])
+        object_response = self.model.generate_content(
+            [
+                "List the main objects and elements visible in this image. Provide as comma-separated list.",
+                Part.from_image(image)
+            ]
+        )
         object_annotations = [obj.strip() for obj in object_response.text.split(',')]
         
         return ImageAnalysis(
