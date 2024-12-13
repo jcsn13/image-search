@@ -15,9 +15,11 @@
 """
 
 from google.cloud import aiplatform
+from google.cloud import storage
 import numpy as np
-from typing import Dict, List, Any
+from typing import Dict, Any
 import os
+import json
 import logging
 
 # Configure logging
@@ -29,11 +31,13 @@ class VectorSearchClient:
         """Initialize Vector Search client"""
         self.project_id = os.environ.get('PROJECT_ID')
         self.location = os.environ.get('REGION')
+        self.bucket_name = os.environ.get('PROCESSED_BUCKET')
+        self.index_id = os.environ.get('VECTOR_SEARCH_INDEX')
         
-        if not all([self.project_id, self.location]):
+        if not all([self.project_id, self.location, self.index_id, self.bucket_name]):
             raise ValueError(
                 "Missing required environment variables. "
-                "Please set PROJECT_ID and REGION"
+                "Please set PROJECT_ID, REGION, INDEX_ID, and BUCKET_NAME"
             )
         
         # Initialize Vertex AI
@@ -42,23 +46,33 @@ class VectorSearchClient:
             location=self.location
         )
         
-        # Get first index endpoint from the list
-        index_endpoints = aiplatform.MatchingEngineIndexEndpoint.list()
+        # Initialize storage client
+        self.storage_client = storage.Client()
+        self.bucket = self.storage_client.bucket(self.bucket_name)
         
-        # Log all endpoints
-        logger.info("Available index endpoints:")
-        for ep in index_endpoints:
-            logger.info(f"- Name: {ep.display_name}")
-            logger.info(f"  Resource name: {ep.resource_name}")
-            logger.info(f"  Deployed indexes: {len(ep.deployed_indexes)}")
-            
-        if not index_endpoints:
-            raise ValueError("No index endpoints found")
-            
-        self.endpoint = aiplatform.MatchingEngineIndexEndpoint(
-            index_endpoint_name=index_endpoints[0].resource_name
+        # Initialize the index
+        self.index = aiplatform.MatchingEngineIndex(
+            index_name=self.index_id
         )
-        logger.info(f"Using endpoint: {self.endpoint.display_name}")
+        logger.info(f"Initialized index: {self.index.resource_name}")
+    
+    def _upload_to_gcs(self, data: Dict[str, Any], blob_name: str) -> str:
+        """
+        Upload data to GCS
+        
+        Args:
+            data: Data to upload
+            blob_name: Name for the blob
+            
+        Returns:
+            GCS URI for the uploaded file
+        """
+        blob = self.bucket.blob(blob_name)
+        blob.upload_from_string(
+            data=json.dumps(data),
+            content_type='application/json'
+        )
+        return f"gs://{self.bucket_name}/{blob_name}"
     
     def upsert_embedding(
         self,
@@ -74,18 +88,30 @@ class VectorSearchClient:
             id: Unique identifier for the embedding
             metadata: Additional metadata to store
         """
-        # Convert embedding to list if it's numpy array
-        if isinstance(embedding, np.ndarray):
-            embedding = embedding.tolist()
-            
-        # Make the request
         try:
-            self.endpoint.upsert_datapoints(
-                embeddings=[embedding],
-                ids=[id],
-                restricts=[metadata]
+            # Convert embedding to list if it's numpy array
+            if isinstance(embedding, np.ndarray):
+                embedding = embedding.tolist()
+            
+            # Prepare data for upload
+            data = [{
+                "id": id,
+                "embedding": embedding,
+                # "name": metadata["processed_image_path"]
+            }]
+            
+            # Upload to GCS
+            blob_name = f"embeddings/{id}.json"
+            gcs_uri = self._upload_to_gcs(data, blob_name)
+            logger.info(f"Uploaded embedding data to {gcs_uri}")
+            
+            # Update the index embeddings
+            self.index.update_embeddings(
+                contents_delta_uri=f"gs://{self.bucket_name}/embeddings",
+                is_complete_overwrite=False
             )
-            logger.info(f"Successfully upserted embedding with id: {id}")
+            logger.info(f"Successfully updated index with embedding id: {id}")
+            
         except Exception as e:
             logger.error(f"Error upserting embedding: {e}")
             raise

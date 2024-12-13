@@ -120,7 +120,7 @@ module "functions" {
   region     = var.region
   raw_bucket_name = module.storage.raw_bucket_name
   processed_bucket_name = module.storage.processed_bucket_name
-  vector_search_index_id = module.vector_search.index_endpoint_id
+  vector_search_index_id = module.vector_search.index_id
   service_account_email = module.iam.service_account_email
 
   depends_on = [

@@ -17,3 +17,8 @@ output "endpoint_network" {
   value       = google_vertex_ai_index_endpoint.image_search_endpoint.network
   description = "The network where the endpoint is deployed"
 }
+
+output "index_id" {
+  value       = google_vertex_ai_index.image_search_index.id
+  description = "Vector Search Index ID"
+}
