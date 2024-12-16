@@ -37,7 +37,7 @@ class VectorSearchClient:
         if not all([self.project_id, self.location, self.index_id, self.bucket_name]):
             raise ValueError(
                 "Missing required environment variables. "
-                "Please set PROJECT_ID, REGION, INDEX_ID, and BUCKET_NAME"
+                "Please set PROJECT_ID, REGION, VECTOR_SEARCH_INDEX, and BUCKET_NAME"
             )
         
         # Initialize Vertex AI
@@ -50,15 +50,15 @@ class VectorSearchClient:
         self.storage_client = storage.Client()
         self.bucket = self.storage_client.bucket(self.bucket_name)
         
-        # Initialize the index
-        self.index = aiplatform.MatchingEngineIndex(
+        # Get the index name parts from the full resource name
+        self.endpoint = aiplatform.MatchingEngineIndex(
             index_name=self.index_id
         )
-        logger.info(f"Initialized index: {self.index.resource_name}")
+        logger.info(f"Initialized endpoint with index: {self.endpoint.resource_name}")
     
     def _upload_to_gcs(self, data: Dict[str, Any], blob_name: str) -> str:
         """
-        Upload data to GCS
+        Upload data to GCS for backup/record keeping
         
         Args:
             data: Data to upload
@@ -81,7 +81,7 @@ class VectorSearchClient:
         metadata: Dict[str, Any]
     ) -> None:
         """
-        Upload embedding to Vector Search
+        Upload embedding to Vector Search using streaming update
         
         Args:
             embedding: Normalized embedding vector
@@ -93,24 +93,36 @@ class VectorSearchClient:
             if isinstance(embedding, np.ndarray):
                 embedding = embedding.tolist()
             
-            # Prepare data for upload
-            data = [{
+            # Prepare data for backup storage
+            storage_data = {
                 "id": id,
                 "embedding": embedding,
-                # "name": metadata["processed_image_path"]
-            }]
+                "metadata": metadata
+            }
             
-            # Upload to GCS
+            # Upload to GCS for backup
             blob_name = f"embeddings/{id}.json"
-            gcs_uri = self._upload_to_gcs(data, blob_name)
-            logger.info(f"Uploaded embedding data to {gcs_uri}")
+            gcs_uri = self._upload_to_gcs(storage_data, blob_name)
+            logger.info(f"Backed up embedding data to {gcs_uri}")
             
-            # Update the index embeddings
-            self.index.update_embeddings(
-                contents_delta_uri=f"gs://{self.bucket_name}/embeddings",
-                is_complete_overwrite=False
+            # Prepare datapoint for streaming update
+            datapoint = {
+                "datapoint_id": id,
+                "feature_vector": embedding,
+            }
+            
+            # # Add metadata as feature fields
+            # restricted_keys = ['file_name', 'original_bucket', 'processed_image_path', 
+            #                  'context', 'characteristics', 'objects']
+            # for key in restricted_keys:
+            #     if key in metadata:
+            #         datapoint[f"metadata_{key}"] = str(metadata[key])
+            
+            # Stream update to the index
+            response = self.endpoint.upsert_datapoints(
+                datapoints=[datapoint]
             )
-            logger.info(f"Successfully updated index with embedding id: {id}")
+            logger.info(f"Successfully streamed embedding with id: {id}")
             
         except Exception as e:
             logger.error(f"Error upserting embedding: {e}")

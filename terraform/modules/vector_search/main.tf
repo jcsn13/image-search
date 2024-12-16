@@ -44,6 +44,8 @@ resource "google_vertex_ai_index" "image_search_index" {
       }
     }
   }
+
+  index_update_method = "STREAM_UPDATE"
 }
 
 # Index Endpoint
