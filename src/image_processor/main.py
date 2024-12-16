@@ -22,6 +22,7 @@ from vector_store import VectorSearchClient
 import logging
 import os
 from typing import Dict, Any
+from location_service import LocationService
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -32,6 +33,7 @@ storage_client = storage.Client()
 analyzer = GeminiImageAnalyzer()
 embedding_generator = EmbeddingGenerator()
 vector_search = VectorSearchClient()
+location_service = LocationService()
 
 PROCESSED_BUCKET = os.environ.get('PROCESSED_BUCKET')
 
@@ -62,6 +64,9 @@ def process_image(cloud_event: Dict[str, Any]) -> tuple[str, int]:
         )
         logger.info(f"Generated embedding for {file_name}")
         
+        # Get location information
+        location_info = location_service.extract_location_from_image(local_path)
+        
         # Store in Vector Search
         metadata = {
             'file_name': file_name,
@@ -71,7 +76,8 @@ def process_image(cloud_event: Dict[str, Any]) -> tuple[str, int]:
             'context': analysis.context_description,
             'characteristics': analysis.visual_characteristics,
             'objects': ','.join(analysis.object_annotations),
-            'processed_image_path': f"gs://{PROCESSED_BUCKET}/{file_name}"
+            'processed_image_path': f"gs://{PROCESSED_BUCKET}/{file_name}",
+            'location': location_info if location_info else None
         }
         
         vector_search.upsert_embedding(
