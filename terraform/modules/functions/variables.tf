@@ -52,3 +52,8 @@ variable "service_account_email" {
   description = "Service Account email for cloud function"
   type = string
 }
+
+variable "maps_api_key_secret_id" {
+  type = string
+  description = "Secret ID for the Google Maps API key"
+}

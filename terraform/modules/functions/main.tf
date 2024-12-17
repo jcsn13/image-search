@@ -63,6 +63,13 @@ resource "google_cloudfunctions2_function" "image_processor" {
       PROCESSED_BUCKET     = var.processed_bucket_name
       VECTOR_SEARCH_INDEX  = var.vector_search_index_id
     }
+
+    secret_environment_variables {
+      key        = "GOOGLE_MAPS_API_KEY"
+      project_id = var.project_id
+      secret     = var.maps_api_key_secret_id
+      version    = "latest"
+    }
   }
 
   event_trigger {

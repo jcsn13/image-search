@@ -13,6 +13,7 @@ provider "google" {
   project = var.project_id
   region  = var.region
   zone    = "${var.region}-a"
+  user_project_override = true
 }
 
 # Enable APIs
@@ -47,7 +48,13 @@ resource "google_project_service" "required_apis" {
     "run.googleapis.com",
     "storage.googleapis.com",
     "vpcaccess.googleapis.com",
-    "eventarc.googleapis.com"
+    "eventarc.googleapis.com",
+    "maps-backend.googleapis.com",
+    "maps-embed-backend.googleapis.com",
+    "places-backend.googleapis.com",
+    "geocoding-backend.googleapis.com",
+    "secretmanager.googleapis.com",
+    "apikeys.googleapis.com"
   ])
 
   project                    = var.project_id
@@ -77,6 +84,75 @@ module "iam" {
 
   depends_on = [
     time_sleep.wait_for_resource_manager
+  ]
+}
+
+# Create API key
+resource "google_apikeys_key" "maps_api_key" {
+  name         = "maps-api-key"
+  display_name = "Google Maps API Key"
+  project      = var.project_id
+
+  restrictions {
+    api_targets {
+      service = "maps-backend.googleapis.com"
+    }
+    api_targets {
+      service = "maps-embed-backend.googleapis.com"
+    }
+    api_targets {
+      service = "places-backend.googleapis.com"
+    }
+    api_targets {
+      service = "geocoding-backend.googleapis.com"
+    }
+  }
+
+  depends_on = [
+    google_project_service.required_apis,
+    time_sleep.wait_for_resource_manager
+  ]
+}
+
+# Create secret container
+resource "google_secret_manager_secret" "maps_api_key" {
+  secret_id = "maps-api-key"
+  project   = var.project_id
+
+  replication {
+    auto {
+    }
+  }
+
+  depends_on = [
+    google_project_service.required_apis,
+    time_sleep.wait_for_resource_manager,
+    google_apikeys_key.maps_api_key
+  ]
+}
+
+# Create secret version with API key
+resource "google_secret_manager_secret_version" "maps_api_key" {
+  secret      = google_secret_manager_secret.maps_api_key.id
+  secret_data = google_apikeys_key.maps_api_key.key_string
+
+  depends_on = [
+    google_secret_manager_secret.maps_api_key,
+    google_apikeys_key.maps_api_key
+  ]
+}
+
+# Grant access to the Cloud Function service account
+resource "google_secret_manager_secret_iam_member" "maps_api_key_access" {
+  project   = var.project_id
+  secret_id = google_secret_manager_secret.maps_api_key.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${module.iam.service_account_email}"
+
+  depends_on = [
+    google_secret_manager_secret.maps_api_key,
+    google_secret_manager_secret_version.maps_api_key,
+    module.iam
   ]
 }
 
@@ -122,9 +198,13 @@ module "functions" {
   processed_bucket_name = module.storage.processed_bucket_name
   vector_search_index_id = module.vector_search.index_id
   service_account_email = module.iam.service_account_email
+  maps_api_key_secret_id = google_secret_manager_secret.maps_api_key.secret_id
 
   depends_on = [
-    module.vector_search
+    module.vector_search,
+    google_secret_manager_secret.maps_api_key,
+    google_secret_manager_secret_version.maps_api_key,
+    google_secret_manager_secret_iam_member.maps_api_key_access
   ]
 }
 

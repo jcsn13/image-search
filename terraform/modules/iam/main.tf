@@ -28,7 +28,8 @@ resource "google_project_iam_member" "grant_sa_function_roles" {
     "roles/serviceusage.serviceUsageConsumer",
     "roles/logging.logWriter",
     "roles/cloudbuild.serviceAgent",
-    "roles/pubsub.publisher"  # For eventarc triggers
+    "roles/pubsub.publisher",  # For eventarc triggers
+    "roles/secretmanager.secretAccessor"
   ])
 
   role    = each.key
