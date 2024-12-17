@@ -62,26 +62,34 @@ class GeminiImageAnalyzer:
             img_byte_arr = io.BytesIO()
             img.save(img_byte_arr, format='PNG')
             img_byte_arr = img_byte_arr.getvalue()
+
+        generation_config = {
+            "max_output_tokens": 150,
+            "temperature": 0.2 
+        }
         
         # Generate context description
         context_response = self.model.generate_content([
             "Provide a detailed description of this image's context and scene in 2-3 sentences.",
             Part.from_data(img_byte_arr, mime_type="image/png")
-        ])
+        ],
+        generation_config=generation_config)
         context_description = context_response.text
         
         # Generate visual characteristics
         visual_response = self.model.generate_content([
             "List the key visual characteristics including colors, lighting, composition, and style. Provide as comma-separated list.",
             Part.from_data(img_byte_arr, mime_type="image/png")
-        ])
+        ],
+        generation_config=generation_config)
         visual_characteristics = visual_response.text
         
         # Generate object annotations
         object_response = self.model.generate_content([
             "List the main objects and elements visible in this image. Provide as comma-separated list.",
             Part.from_data(img_byte_arr, mime_type="image/png")
-        ])
+        ],
+        generation_config=generation_config)
         object_annotations = [obj.strip() for obj in object_response.text.split(',')]
         
         return ImageAnalysis(
