@@ -111,7 +111,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # Constants
-API_ENDPOINT = "http://localhost:8000"
+API_ENDPOINT = "https://image-search-api-958356772890.us-central1.run.app"
 
 def search_images(query: str, use_mock: bool = True) -> List[Dict]:
     """
@@ -121,12 +121,25 @@ def search_images(query: str, use_mock: bool = True) -> List[Dict]:
         return get_mock_results(query)
     
     try:
-        response = requests.get(
+        headers = {
+            'Content-Type': 'application/json'
+        }
+        response = requests.post(
             f"{API_ENDPOINT}/search",
-            params={"query": query}
+            headers=headers,
+            json={"query": query}
         )
+        
+        # Print response details for debugging
+        st.write("Response Status:", response.status_code)
+        st.write("Response Headers:", dict(response.headers))
+        try:
+            st.write("Response Body:", response.json())
+        except:
+            st.write("Response Text:", response.text)
+            
         response.raise_for_status()
-        return response.json()
+        return response.json().get('results', [])
     except requests.RequestException as e:
         st.error(f"Error connecting to API: {str(e)}")
         return []
