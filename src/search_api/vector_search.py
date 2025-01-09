@@ -1,0 +1,116 @@
+"""
+Copyright 2024 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
+from google.cloud import aiplatform
+from google.cloud import storage
+import vertexai
+from vertexai.vision_models import MultiModalEmbeddingModel
+import numpy as np
+import os
+from typing import List
+import logging
+import json
+from models import SearchResult
+
+logger = logging.getLogger(__name__)
+
+class VectorSearchService:
+    def __init__(self):
+        """Initialize Vector Search service"""
+        self.project_id = os.environ.get('PROJECT_ID')
+        self.location = os.environ.get('REGION')
+        self.index_id = os.environ.get('VECTOR_SEARCH_INDEX')
+        self.bucket_name = os.environ.get('PROCESSED_BUCKET')
+
+        if not all([self.project_id, self.location, self.index_id]):
+            raise ValueError(
+                "Missing required environment variables. "
+                "Please set PROJECT_ID, REGION, and VECTOR_SEARCH_INDEX"
+            )
+
+        # Initialize Vertex AI
+        vertexai.init(
+            project=self.project_id,
+            location=self.location
+        )
+
+        # Initialize Vector Search index
+        self.index = aiplatform.MatchingEngineIndex(
+            index_name=self.index_id
+        )
+        
+        # Initialize multimodal embedding model - same as processor
+        self.embedding_model = MultiModalEmbeddingModel.from_pretrained("multimodalembedding")
+        
+        # Initialize storage client
+        self.storage_client = storage.Client()
+        self.bucket = self.storage_client.bucket(self.bucket_name)
+
+    def generate_text_embedding(self, text: str) -> np.ndarray:
+        """Generate embedding for text query using multimodal model"""
+        embeddings = self.embedding_model.get_embeddings(
+            image=None,  # No image for text-only query
+            contextual_text=text,
+            dimension=1408  # Same dimension as processor
+        )
+        
+        # Get text embedding from model response
+        embedding_array = np.array(embeddings.text_embedding)
+        return embedding_array / np.linalg.norm(embedding_array)
+
+    def search_similar(
+        self,
+        query_embedding: np.ndarray,
+        num_neighbors: int = 10,
+        distance_threshold: float = 0.5
+    ) -> List[SearchResult]:
+        """Search for similar vectors"""
+        try:
+            # Convert embedding to list if it's numpy array
+            if isinstance(query_embedding, np.ndarray):
+                query_embedding = query_embedding.tolist()
+
+            # Query the index
+            response = self.index.find_neighbors(
+                query_embedding,
+                num_neighbors=num_neighbors,
+            )
+
+            results = []
+            for match in response:
+                # Skip results above distance threshold
+                if match.distance > distance_threshold:
+                    continue
+
+                # Get metadata from GCS
+                try:
+                    blob = self.bucket.blob(f"embeddings/{match.id}.json")
+                    metadata = json.loads(blob.download_as_string())['metadata']
+                except Exception as e:
+                    logger.error(f"Error fetching metadata for {match.id}: {e}")
+                    metadata = {}
+
+                results.append(SearchResult(
+                    id=match.id,
+                    score=1.0 - match.distance,  # Convert distance to similarity score
+                    metadata=metadata
+                ))
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Error searching similar vectors: {e}")
+            raise

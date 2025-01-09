@@ -1,0 +1,7 @@
+flask
+google-cloud-aiplatform
+google-cloud-storage
+numpy
+gunicorn
+vertexai
+functions-framework
