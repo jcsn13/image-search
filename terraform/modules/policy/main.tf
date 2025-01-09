@@ -102,3 +102,12 @@ resource "google_project_organization_policy" "allow_cloudbuild_worker_pools" {
     }
   }
 }
+
+resource "google_project_organization_policy" "automatic_iam_grants" {
+  project    = var.project_id
+  constraint = "iam.automaticIamGrantsForDefaultServiceAccounts"
+
+  boolean_policy {
+    enforced = false
+  }
+}

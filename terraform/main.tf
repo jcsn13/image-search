@@ -10,9 +10,9 @@ terraform {
 }
 
 provider "google" {
-  project = var.project_id
-  region  = var.region
-  zone    = "${var.region}-a"
+  project               = var.project_id
+  region                = var.region
+  zone                  = "${var.region}-a"
   user_project_override = true
 }
 
@@ -28,6 +28,23 @@ resource "time_sleep" "wait_for_resource_manager" {
 
   depends_on = [
     google_project_service.resource_manager
+  ]
+}
+
+module "policies" {
+  source     = "./modules/policy"
+  project_id = var.project_id
+
+  depends_on = [
+    time_sleep.wait_for_resource_manager
+  ]
+}
+
+resource "time_sleep" "wait_for_policies" {
+  create_duration = "30s"
+
+  depends_on = [
+    module.policies
   ]
 }
 
@@ -62,28 +79,21 @@ resource "google_project_service" "required_apis" {
   disable_dependent_services = true
 
   depends_on = [
-    google_project_service.resource_manager,
-    time_sleep.wait_for_resource_manager
-  ]
-}
-
-module "policies" {
-  source     = "./modules/policy"
-  project_id = var.project_id
-
-  depends_on = [
-    time_sleep.wait_for_resource_manager
+    time_sleep.wait_for_policies
   ]
 }
 
 module "iam" {
-  source     = "./modules/iam"
-  project_id = var.project_id
+  source         = "./modules/iam"
+  project_id     = var.project_id
   project_number = var.project_number
-  region     = var.region
+  region         = var.region
 
   depends_on = [
-    time_sleep.wait_for_resource_manager
+    time_sleep.wait_for_resource_manager,
+    google_project_service.required_apis,
+    time_sleep.wait_for_policies
+
   ]
 }
 
@@ -120,7 +130,10 @@ resource "google_secret_manager_secret" "maps_api_key" {
   project   = var.project_id
 
   replication {
-    auto {
+    user_managed {
+      replicas {
+        location = var.region
+      }
     }
   }
 
@@ -156,15 +169,6 @@ resource "google_secret_manager_secret_iam_member" "maps_api_key_access" {
   ]
 }
 
-resource "time_sleep" "wait_for_policies" {
-  create_duration = "30s"
-
-  depends_on = [
-    module.policies,
-    google_project_service.required_apis
-  ]
-}
-
 module "storage" {
   source     = "./modules/storage"
   project_id = var.project_id
@@ -177,12 +181,12 @@ module "storage" {
 }
 
 module "vector_search" {
-  source         = "./modules/vector_search"
-  project_id     = var.project_id
-  project_number = var.project_number
-  region         = var.region
-  index_name     = "image-search-index"
-  dimensions     = 1408
+  source                = "./modules/vector_search"
+  project_id            = var.project_id
+  project_number        = var.project_number
+  region                = var.region
+  index_name            = "image-search-index"
+  dimensions            = 1408
   service_account_email = module.iam.service_account_email
 
   depends_on = [
@@ -191,13 +195,14 @@ module "vector_search" {
 }
 
 module "functions" {
-  source = "./modules/functions"
-  project_id = var.project_id
-  region     = var.region
-  raw_bucket_name = module.storage.raw_bucket_name
-  processed_bucket_name = module.storage.processed_bucket_name
+  source                 = "./modules/functions"
+  project_id             = var.project_id
+  region                 = var.region
+  project_number         = var.project_number  
+  raw_bucket_name        = module.storage.raw_bucket_name
+  processed_bucket_name  = module.storage.processed_bucket_name
   vector_search_index_id = module.vector_search.index_id
-  service_account_email = module.iam.service_account_email
+  service_account_email  = module.iam.service_account_email
   maps_api_key_secret_id = google_secret_manager_secret.maps_api_key.secret_id
 
   depends_on = [

@@ -65,7 +65,8 @@ resource "google_vertex_ai_index_endpoint" "image_search_endpoint" {
 # Deploy Index to Endpoint
 resource "google_vertex_ai_index_endpoint_deployed_index" "image_search_deployed_index" {
   depends_on = [
-    google_vertex_ai_index_endpoint.image_search_endpoint
+    google_vertex_ai_index_endpoint.image_search_endpoint,
+    google_service_networking_connection.vertex_vpc_connection
   ]
 
   index_endpoint   = google_vertex_ai_index_endpoint.image_search_endpoint.id

@@ -9,6 +9,11 @@ variable "region" {
   default     = "us-central1"
 }
 
+variable "project_number" {
+  description = "The number of the project"
+  type        = string
+}
+
 variable "raw_bucket_name" {
   description = "Name of the bucket containing raw images"
   type        = string

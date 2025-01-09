@@ -21,7 +21,7 @@ resource "google_storage_bucket_object" "function_source" {
 # Create a default Cloud Build worker pool
 resource "google_cloudbuild_worker_pool" "default_pool" {
   name     = "default-pool"
-  location = "us-central1"
+  location = var.region
   project  = var.project_id
 
   worker_config {
@@ -85,6 +85,36 @@ resource "google_cloudfunctions2_function" "image_processor" {
   }
 
   depends_on = [
-    google_cloudbuild_worker_pool.default_pool
+    google_cloudbuild_worker_pool.default_pool,
+    google_project_iam_member.cloudbuild_sa_permissions,
+    google_project_iam_member.compute_eventarc_receiver
   ]  
+}
+
+# # Add permissions for the default Cloud Build service account
+resource "google_project_iam_member" "cloudbuild_sa_permissions" {
+  for_each = toset([
+    "roles/cloudbuild.builds.builder",
+    "roles/cloudbuild.serviceAgent",
+    "roles/iam.serviceAccountUser",
+    "roles/cloudfunctions.developer",
+    "roles/run.developer"
+  ])
+  
+  project = var.project_id
+  role    = each.key
+  member  = "serviceAccount:${var.project_number}-compute@developer.gserviceaccount.com"
+}
+
+# Grant Eventarc Event Receiver role to the Compute Engine default service account
+resource "google_project_iam_member" "compute_eventarc_receiver" {
+  project = var.project_id
+  role    = "roles/eventarc.eventReceiver"
+  member  = "serviceAccount:${var.project_number}-compute@developer.gserviceaccount.com"
+}
+
+resource "google_project_iam_member" "gcs_pubsub_publisher" {
+  project = var.project_id
+  role    = "roles/pubsub.publisher"
+  member  = "serviceAccount:service-${var.project_number}@gs-project-accounts.iam.gserviceaccount.com"
 }
