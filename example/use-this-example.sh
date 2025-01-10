@@ -9,8 +9,8 @@ REGION="us-central1"
 # Set the bucket name #the bucket name is the PROJECT_ID + "-raw-images"
 BUCKET_NAME="${PROJECT_ID}-raw-images"
 
-# Set the file path
-FILE_PATH="./largo da batata/image001.jpg"
+# Set the directory path to location_images
+IMAGES_DIR="./location_images"
 
 # Run the upload script
-python upload.py --bucket "$BUCKET_NAME" --file "$FILE_PATH"
+python upload.py --bucket "$BUCKET_NAME" --dir "$IMAGES_DIR"

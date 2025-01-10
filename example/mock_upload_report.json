@@ -1,0 +1,434 @@
+{
+  "summary": {
+    "total_files": 45,
+    "total_size_bytes": 267683079,
+    "locations_processed": 15,
+    "files_by_location": {
+      "Tower_Bridge": {
+        "file_count": 3,
+        "total_size_bytes": 1467363
+      },
+      "Colosseum": {
+        "file_count": 3,
+        "total_size_bytes": 12723514
+      },
+      "Acropolis_Athens": {
+        "file_count": 3,
+        "total_size_bytes": 15826911
+      },
+      "Taj_Mahal": {
+        "file_count": 3,
+        "total_size_bytes": 12535952
+      },
+      "Sydney_Opera_House": {
+        "file_count": 3,
+        "total_size_bytes": 668673
+      },
+      "Eiffel_Tower": {
+        "file_count": 3,
+        "total_size_bytes": 12037251
+      },
+      "Marina_Bay_Sands": {
+        "file_count": 3,
+        "total_size_bytes": 27864947
+      },
+      "Sensoji_Temple": {
+        "file_count": 3,
+        "total_size_bytes": 7049061
+      },
+      "Sagrada_Familia": {
+        "file_count": 3,
+        "total_size_bytes": 31067901
+      },
+      "Stanley_Park": {
+        "file_count": 3,
+        "total_size_bytes": 7040472
+      },
+      "Statue_of_Liberty": {
+        "file_count": 3,
+        "total_size_bytes": 93945139
+      },
+      "Forbidden_City": {
+        "file_count": 3,
+        "total_size_bytes": 5533447
+      },
+      "Christ_the_Redeemer": {
+        "file_count": 3,
+        "total_size_bytes": 13201516
+      },
+      "Petra_Treasury": {
+        "file_count": 3,
+        "total_size_bytes": 15681988
+      },
+      "Burj_Khalifa": {
+        "file_count": 3,
+        "total_size_bytes": 11038944
+      }
+    },
+    "start_time": "2025-01-10T12:31:29.724361",
+    "bucket_name": "mock-project-raw-images",
+    "end_time": "2025-01-10T12:31:29.726254"
+  },
+  "detailed_uploads": [
+    {
+      "file_name": "Tower_Bridge_3.jpg",
+      "bucket_path": "Tower_Bridge/Tower_Bridge_3.jpg",
+      "location_metadata": "Tower_Bridge",
+      "size_bytes": 14831,
+      "upload_timestamp": "2025-01-10T12:31:29.724694",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Tower_Bridge_2.jpg",
+      "bucket_path": "Tower_Bridge/Tower_Bridge_2.jpg",
+      "location_metadata": "Tower_Bridge",
+      "size_bytes": 1048490,
+      "upload_timestamp": "2025-01-10T12:31:29.724725",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Tower_Bridge_1.jpg",
+      "bucket_path": "Tower_Bridge/Tower_Bridge_1.jpg",
+      "location_metadata": "Tower_Bridge",
+      "size_bytes": 404042,
+      "upload_timestamp": "2025-01-10T12:31:29.724744",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Colosseum_3.jpg",
+      "bucket_path": "Colosseum/Colosseum_3.jpg",
+      "location_metadata": "Colosseum",
+      "size_bytes": 5360126,
+      "upload_timestamp": "2025-01-10T12:31:29.724818",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Colosseum_2.JPG",
+      "bucket_path": "Colosseum/Colosseum_2.JPG",
+      "location_metadata": "Colosseum",
+      "size_bytes": 7217329,
+      "upload_timestamp": "2025-01-10T12:31:29.724838",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Colosseum_1.jpg",
+      "bucket_path": "Colosseum/Colosseum_1.jpg",
+      "location_metadata": "Colosseum",
+      "size_bytes": 146059,
+      "upload_timestamp": "2025-01-10T12:31:29.724852",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Acropolis_Athens_2.jpg",
+      "bucket_path": "Acropolis_Athens/Acropolis_Athens_2.jpg",
+      "location_metadata": "Acropolis_Athens",
+      "size_bytes": 12829751,
+      "upload_timestamp": "2025-01-10T12:31:29.724918",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Acropolis_Athens_3.jpg",
+      "bucket_path": "Acropolis_Athens/Acropolis_Athens_3.jpg",
+      "location_metadata": "Acropolis_Athens",
+      "size_bytes": 1176746,
+      "upload_timestamp": "2025-01-10T12:31:29.724935",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Acropolis_Athens_1.jpg",
+      "bucket_path": "Acropolis_Athens/Acropolis_Athens_1.jpg",
+      "location_metadata": "Acropolis_Athens",
+      "size_bytes": 1820414,
+      "upload_timestamp": "2025-01-10T12:31:29.724948",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Taj_Mahal_2.JPG",
+      "bucket_path": "Taj_Mahal/Taj_Mahal_2.JPG",
+      "location_metadata": "Taj_Mahal",
+      "size_bytes": 9447994,
+      "upload_timestamp": "2025-01-10T12:31:29.725009",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Taj_Mahal_3.jpg",
+      "bucket_path": "Taj_Mahal/Taj_Mahal_3.jpg",
+      "location_metadata": "Taj_Mahal",
+      "size_bytes": 309834,
+      "upload_timestamp": "2025-01-10T12:31:29.725026",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Taj_Mahal_1.jpg",
+      "bucket_path": "Taj_Mahal/Taj_Mahal_1.jpg",
+      "location_metadata": "Taj_Mahal",
+      "size_bytes": 2778124,
+      "upload_timestamp": "2025-01-10T12:31:29.725039",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Sydney_Opera_House_1.jpg",
+      "bucket_path": "Sydney_Opera_House/Sydney_Opera_House_1.jpg",
+      "location_metadata": "Sydney_Opera_House",
+      "size_bytes": 184170,
+      "upload_timestamp": "2025-01-10T12:31:29.725100",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Sydney_Opera_House_2.jpg",
+      "bucket_path": "Sydney_Opera_House/Sydney_Opera_House_2.jpg",
+      "location_metadata": "Sydney_Opera_House",
+      "size_bytes": 248935,
+      "upload_timestamp": "2025-01-10T12:31:29.725117",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Sydney_Opera_House_3.jpg",
+      "bucket_path": "Sydney_Opera_House/Sydney_Opera_House_3.jpg",
+      "location_metadata": "Sydney_Opera_House",
+      "size_bytes": 235568,
+      "upload_timestamp": "2025-01-10T12:31:29.725130",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Eiffel_Tower_1.jpg",
+      "bucket_path": "Eiffel_Tower/Eiffel_Tower_1.jpg",
+      "location_metadata": "Eiffel_Tower",
+      "size_bytes": 11897183,
+      "upload_timestamp": "2025-01-10T12:31:29.725208",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Eiffel_Tower_2.png",
+      "bucket_path": "Eiffel_Tower/Eiffel_Tower_2.png",
+      "location_metadata": "Eiffel_Tower",
+      "size_bytes": 65095,
+      "upload_timestamp": "2025-01-10T12:31:29.725224",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Eiffel_Tower_3.JPG",
+      "bucket_path": "Eiffel_Tower/Eiffel_Tower_3.JPG",
+      "location_metadata": "Eiffel_Tower",
+      "size_bytes": 74973,
+      "upload_timestamp": "2025-01-10T12:31:29.725238",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Marina_Bay_Sands_1.jpg",
+      "bucket_path": "Marina_Bay_Sands/Marina_Bay_Sands_1.jpg",
+      "location_metadata": "Marina_Bay_Sands",
+      "size_bytes": 5699523,
+      "upload_timestamp": "2025-01-10T12:31:29.725299",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Marina_Bay_Sands_3.jpg",
+      "bucket_path": "Marina_Bay_Sands/Marina_Bay_Sands_3.jpg",
+      "location_metadata": "Marina_Bay_Sands",
+      "size_bytes": 7494078,
+      "upload_timestamp": "2025-01-10T12:31:29.725315",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Marina_Bay_Sands_2.jpg",
+      "bucket_path": "Marina_Bay_Sands/Marina_Bay_Sands_2.jpg",
+      "location_metadata": "Marina_Bay_Sands",
+      "size_bytes": 14671346,
+      "upload_timestamp": "2025-01-10T12:31:29.725328",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Sensoji_Temple_1.jpg",
+      "bucket_path": "Sensoji_Temple/Sensoji_Temple_1.jpg",
+      "location_metadata": "Sensoji_Temple",
+      "size_bytes": 320858,
+      "upload_timestamp": "2025-01-10T12:31:29.725382",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Sensoji_Temple_2.jpg",
+      "bucket_path": "Sensoji_Temple/Sensoji_Temple_2.jpg",
+      "location_metadata": "Sensoji_Temple",
+      "size_bytes": 5074692,
+      "upload_timestamp": "2025-01-10T12:31:29.725398",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Sensoji_Temple_3.JPG",
+      "bucket_path": "Sensoji_Temple/Sensoji_Temple_3.JPG",
+      "location_metadata": "Sensoji_Temple",
+      "size_bytes": 1653511,
+      "upload_timestamp": "2025-01-10T12:31:29.725410",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Sagrada_Familia_2.jpg",
+      "bucket_path": "Sagrada_Familia/Sagrada_Familia_2.jpg",
+      "location_metadata": "Sagrada_Familia",
+      "size_bytes": 1217810,
+      "upload_timestamp": "2025-01-10T12:31:29.725460",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Sagrada_Familia_3.jpg",
+      "bucket_path": "Sagrada_Familia/Sagrada_Familia_3.jpg",
+      "location_metadata": "Sagrada_Familia",
+      "size_bytes": 146059,
+      "upload_timestamp": "2025-01-10T12:31:29.725476",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Sagrada_Familia_1.jpg",
+      "bucket_path": "Sagrada_Familia/Sagrada_Familia_1.jpg",
+      "location_metadata": "Sagrada_Familia",
+      "size_bytes": 29704032,
+      "upload_timestamp": "2025-01-10T12:31:29.725494",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Stanley_Park_2.jpg",
+      "bucket_path": "Stanley_Park/Stanley_Park_2.jpg",
+      "location_metadata": "Stanley_Park",
+      "size_bytes": 852509,
+      "upload_timestamp": "2025-01-10T12:31:29.725545",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Stanley_Park_3.jpg",
+      "bucket_path": "Stanley_Park/Stanley_Park_3.jpg",
+      "location_metadata": "Stanley_Park",
+      "size_bytes": 94723,
+      "upload_timestamp": "2025-01-10T12:31:29.725561",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Stanley_Park_1.jpg",
+      "bucket_path": "Stanley_Park/Stanley_Park_1.jpg",
+      "location_metadata": "Stanley_Park",
+      "size_bytes": 6093240,
+      "upload_timestamp": "2025-01-10T12:31:29.725574",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Statue_of_Liberty_1.jpg",
+      "bucket_path": "Statue_of_Liberty/Statue_of_Liberty_1.jpg",
+      "location_metadata": "Statue_of_Liberty",
+      "size_bytes": 89505720,
+      "upload_timestamp": "2025-01-10T12:31:29.725635",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Statue_of_Liberty_2.jpg",
+      "bucket_path": "Statue_of_Liberty/Statue_of_Liberty_2.jpg",
+      "location_metadata": "Statue_of_Liberty",
+      "size_bytes": 3163186,
+      "upload_timestamp": "2025-01-10T12:31:29.725651",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Statue_of_Liberty_3.jpg",
+      "bucket_path": "Statue_of_Liberty/Statue_of_Liberty_3.jpg",
+      "location_metadata": "Statue_of_Liberty",
+      "size_bytes": 1276233,
+      "upload_timestamp": "2025-01-10T12:31:29.725664",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Forbidden_City_1.jpg",
+      "bucket_path": "Forbidden_City/Forbidden_City_1.jpg",
+      "location_metadata": "Forbidden_City",
+      "size_bytes": 4114524,
+      "upload_timestamp": "2025-01-10T12:31:29.725726",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Forbidden_City_2.jpg",
+      "bucket_path": "Forbidden_City/Forbidden_City_2.jpg",
+      "location_metadata": "Forbidden_City",
+      "size_bytes": 150930,
+      "upload_timestamp": "2025-01-10T12:31:29.725742",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Forbidden_City_3.JPG",
+      "bucket_path": "Forbidden_City/Forbidden_City_3.JPG",
+      "location_metadata": "Forbidden_City",
+      "size_bytes": 1267993,
+      "upload_timestamp": "2025-01-10T12:31:29.725755",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Christ_the_Redeemer_1.jpg",
+      "bucket_path": "Christ_the_Redeemer/Christ_the_Redeemer_1.jpg",
+      "location_metadata": "Christ_the_Redeemer",
+      "size_bytes": 146059,
+      "upload_timestamp": "2025-01-10T12:31:29.725812",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Christ_the_Redeemer_2.JPG",
+      "bucket_path": "Christ_the_Redeemer/Christ_the_Redeemer_2.JPG",
+      "location_metadata": "Christ_the_Redeemer",
+      "size_bytes": 5877880,
+      "upload_timestamp": "2025-01-10T12:31:29.725828",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Christ_the_Redeemer_3.jpg",
+      "bucket_path": "Christ_the_Redeemer/Christ_the_Redeemer_3.jpg",
+      "location_metadata": "Christ_the_Redeemer",
+      "size_bytes": 7177577,
+      "upload_timestamp": "2025-01-10T12:31:29.725841",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Petra_Treasury_1.jpg",
+      "bucket_path": "Petra_Treasury/Petra_Treasury_1.jpg",
+      "location_metadata": "Petra_Treasury",
+      "size_bytes": 2034463,
+      "upload_timestamp": "2025-01-10T12:31:29.726076",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Petra_Treasury_2.jpg",
+      "bucket_path": "Petra_Treasury/Petra_Treasury_2.jpg",
+      "location_metadata": "Petra_Treasury",
+      "size_bytes": 2945370,
+      "upload_timestamp": "2025-01-10T12:31:29.726102",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Petra_Treasury_3.JPG",
+      "bucket_path": "Petra_Treasury/Petra_Treasury_3.JPG",
+      "location_metadata": "Petra_Treasury",
+      "size_bytes": 10702155,
+      "upload_timestamp": "2025-01-10T12:31:29.726119",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Burj_Khalifa_1.jpg",
+      "bucket_path": "Burj_Khalifa/Burj_Khalifa_1.jpg",
+      "location_metadata": "Burj_Khalifa",
+      "size_bytes": 2857793,
+      "upload_timestamp": "2025-01-10T12:31:29.726205",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Burj_Khalifa_3.jpg",
+      "bucket_path": "Burj_Khalifa/Burj_Khalifa_3.jpg",
+      "location_metadata": "Burj_Khalifa",
+      "size_bytes": 945603,
+      "upload_timestamp": "2025-01-10T12:31:29.726222",
+      "bucket": "mock-project-raw-images"
+    },
+    {
+      "file_name": "Burj_Khalifa_2.jpg",
+      "bucket_path": "Burj_Khalifa/Burj_Khalifa_2.jpg",
+      "location_metadata": "Burj_Khalifa",
+      "size_bytes": 7235548,
+      "upload_timestamp": "2025-01-10T12:31:29.726247",
+      "bucket": "mock-project-raw-images"
+    }
+  ]
+}

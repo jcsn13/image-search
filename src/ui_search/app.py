@@ -1,7 +1,6 @@
 import streamlit as st
 import requests
 from typing import List, Dict
-from mock_data import get_mock_results
 import os
 from dotenv import load_dotenv
 
@@ -47,10 +46,23 @@ st.markdown("""
     .stImage {
         border-radius: 8px;
         transition: transform 0.2s;
+        margin-bottom: 0.5rem;
     }
 
     .stImage:hover {
         transform: scale(1.02);
+    }
+
+    /* Make progress bars more compact */
+    .stProgress {
+        margin-bottom: 0.5rem !important;
+    }
+
+    /* Make expanders more compact */
+    .streamlit-expanderHeader {
+        margin-top: 0 !important;
+        margin-bottom: 0.5rem !important;
+        padding: 0.5rem !important;
     }
 
     /* Typography */
@@ -106,11 +118,19 @@ st.markdown("""
     .tag {
         background-color: #E3F2FD;
         color: var(--md-primary);
-        padding: 4px 8px;
-        border-radius: 16px;
-        font-size: 0.85rem;
+        padding: 2px 6px;
+        border-radius: 12px;
+        font-size: 0.75rem;
         margin-right: 4px;
+        margin-bottom: 2px;
         display: inline-block;
+    }
+
+    /* Compact the metadata text */
+    .metadata-text {
+        font-size: 0.9rem;
+        margin: 0;
+        padding: 0;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -120,12 +140,120 @@ API_ENDPOINT = os.getenv('API_ENDPOINT')
 if not API_ENDPOINT:
     raise ValueError("API_ENDPOINT environment variable is not set")
 
-def search_images(query: str, use_mock: bool = True) -> List[Dict]:
+def search_images(query: str, use_mock: bool = False):
     """
-    Search for images using either the real API or mock data
+    Search for images using either the real API or mock data.
+    Returns the full response object when using the real API,
+    or a mock response object when using mock data.
     """
     if use_mock:
-        return get_mock_results(query)
+        mock_results = [
+            {
+                "id": "city-building.jpg",
+                "metadata": {
+                    "characteristics": "Modern, urban, architectural, glass, steel, blue sky, reflective, downtown",
+                    "content_type": "image/jpeg",
+                    "context": "A modern glass skyscraper in a downtown area, reflecting the blue sky and surrounding buildings. The architecture showcases contemporary urban design.",
+                    "created_at": "Fri, 10 Jan 2025 12:35:36 GMT",
+                    "file_name": "city-building.jpg",
+                    "location": "New York",
+                    "objects": "Building, windows, sky, reflections, architectural details, glass panels",
+                    "original_bucket": "image-search-demo",
+                    "processed_image_path": "https://images.unsplash.com/photo-1486325212027-8081e485255e?w=800&auto=format&fit=crop",
+                    "size": "3.2 MB"
+                },
+                "similarity_score": 0.9415058791637421
+            },
+            {
+                "id": "nature-landscape.jpg",
+                "metadata": {
+                    "characteristics": "Natural, mountainous, scenic, green, peaceful, outdoor, wilderness, majestic",
+                    "content_type": "image/jpeg",
+                    "context": "A breathtaking mountain landscape with lush green valleys and snow-capped peaks. The scene captures the raw beauty of nature in its most pristine form.",
+                    "created_at": "Fri, 10 Jan 2025 12:35:19 GMT",
+                    "file_name": "nature-landscape.jpg",
+                    "location": "Swiss Alps",
+                    "objects": "Mountains, trees, valley, sky, clouds, snow peaks, forest",
+                    "original_bucket": "image-search-demo",
+                    "processed_image_path": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&auto=format&fit=crop",
+                    "size": "2.8 MB"
+                },
+                "similarity_score": 0.9819442108273506
+            },
+            {
+                "id": "coffee-workspace.jpg",
+                "metadata": {
+                    "characteristics": "Indoor, warm, cozy, productive, modern, minimal, organized, professional",
+                    "content_type": "image/jpeg",
+                    "context": "A clean and modern workspace setup with a laptop, coffee cup, and minimal accessories on a wooden desk. The scene suggests a productive work environment.",
+                    "created_at": "Fri, 10 Jan 2025 12:34:45 GMT",
+                    "file_name": "coffee-workspace.jpg",
+                    "location": "Home Office",
+                    "objects": "Laptop, coffee cup, desk, notebook, pen, plant, wooden surface",
+                    "original_bucket": "image-search-demo",
+                    "processed_image_path": "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop",
+                    "size": "1.9 MB"
+                },
+                "similarity_score": 0.8756324159276485
+            },
+            {
+                "id": "beach-sunset.jpg",
+                "metadata": {
+                    "characteristics": "Natural, coastal, warm colors, peaceful, scenic, romantic, tropical, serene",
+                    "content_type": "image/jpeg",
+                    "context": "A stunning sunset view at a tropical beach with palm trees silhouetted against the orange and purple sky. The ocean reflects the warm colors of the setting sun.",
+                    "created_at": "Fri, 10 Jan 2025 12:33:22 GMT",
+                    "file_name": "beach-sunset.jpg",
+                    "location": "Tropical Beach",
+                    "objects": "Ocean, beach, palm trees, sun, clouds, sand, waves",
+                    "original_bucket": "image-search-demo",
+                    "processed_image_path": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&auto=format&fit=crop",
+                    "size": "2.4 MB"
+                },
+                "similarity_score": 0.9234567890123456
+            },
+            {
+                "id": "food-photography.jpg",
+                "metadata": {
+                    "characteristics": "Culinary, colorful, appetizing, fresh, styled, professional, detailed, artistic",
+                    "content_type": "image/jpeg",
+                    "context": "An artistically arranged plate of fresh food showcasing culinary expertise. The composition includes vibrant vegetables and carefully plated elements.",
+                    "created_at": "Fri, 10 Jan 2025 12:32:15 GMT",
+                    "file_name": "food-photography.jpg",
+                    "location": "Studio",
+                    "objects": "Plate, food, vegetables, garnish, table, cutlery, herbs",
+                    "original_bucket": "image-search-demo",
+                    "processed_image_path": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&auto=format&fit=crop",
+                    "size": "1.7 MB"
+                },
+                "similarity_score": 0.8912345678901234
+            }
+        ]
+        
+        # Create a mock response object
+        class MockResponse:
+            def __init__(self, data):
+                self.data = data
+                self.status_code = 200
+                self.ok = True
+                self._headers = {
+                    'content-type': 'application/json',
+                    'date': 'Fri, 10 Jan 2025 13:54:00 GMT',
+                    'server': 'Mock Server'
+                }
+            
+            def json(self):
+                return self.data
+            
+            @property
+            def headers(self):
+                return self._headers
+            
+            @property
+            def text(self):
+                return str(self.data)
+        
+        return MockResponse({'query': query, 'results': mock_results})
     
     try:
         headers = {
@@ -136,26 +264,34 @@ def search_images(query: str, use_mock: bool = True) -> List[Dict]:
             headers=headers,
             json={"query": query}
         )
-        
-        # Print response details for debugging
-        st.write("Response Status:", response.status_code)
-        st.write("Response Headers:", dict(response.headers))
-        try:
-            st.write("Response Body:", response.json())
-        except:
-            st.write("Response Text:", response.text)
-            
-        response.raise_for_status()
-        return response.json().get('results', [])
+        return response
     except requests.RequestException as e:
-        st.error(f"Error connecting to API: {str(e)}")
-        return []
+        # Create an error response
+        class ErrorResponse:
+            def __init__(self, error):
+                self.status_code = 500
+                self.ok = False
+                self.error = error
+                self._headers = {}
+            
+            def json(self):
+                return {'error': str(self.error)}
+            
+            @property
+            def headers(self):
+                return self._headers
+            
+            @property
+            def text(self):
+                return str(self.error)
+        
+        return ErrorResponse(e)
 
 def main():
     # Sidebar for settings
     with st.sidebar:
         st.title("⚙️ Settings")
-        use_mock = st.toggle("Use mock data", value=True)
+        use_mock = st.toggle("Use mock data", value=False)
         st.divider()
         st.markdown("### Filters")
         min_similarity = st.slider("Minimum similarity", 0.0, 1.0, 0.5, 
@@ -183,83 +319,114 @@ def main():
         with col2:
             search_button = st.button("Search", type="primary", use_container_width=True)
     
+    # Create tabs for results and logging
+    results_tab, logging_tab = st.tabs(["Results", "Logging"])
+    
     # Handle search
     if search_button and query:
         with st.spinner("🔍 Searching for images..."):
-            results = search_images(query, use_mock=use_mock)
+            response = search_images(query, use_mock=use_mock)
             
-            if results:
-                # Filter results based on minimum similarity
-                filtered_results = [r for r in results if r.get('similarity', 0) >= min_similarity]
-                
-                if not filtered_results:
-                    st.warning("No results match your filter criteria.")
-                    return
-                
-                # Sort results
-                if sort_by == "Similarity":
-                    filtered_results.sort(key=lambda x: x.get('similarity', 0), reverse=True)
-                
-                # Display results count with material design
-                st.markdown(f"""
-                    <div class="results-count">
-                        📸 Found {len(filtered_results)} images
-                    </div>
-                    """, 
-                    unsafe_allow_html=True
-                )
-                
-                # Create grid layout
-                cols = st.columns(3)
-                for idx, result in enumerate(filtered_results):
-                    with cols[idx % 3]:
-                        with st.container():
-                            # Image card with hover effect
-                            st.image(
-                                result.get("image_url", "placeholder.jpg"),
-                                use_column_width=True
-                            )
-                            
-                            # Similarity score
-                            similarity = result.get('similarity', 0)
-                            st.progress(similarity, text=f"Similarity: {similarity:.0%}")
-                            
-                            # Metadata expansion
-                            with st.expander("Details"):
-                                if 'metadata' in result:
-                                    st.markdown("**Description**")
-                                    st.write(result['metadata'].get('description', 'N/A'))
+            # Show response details in logging tab
+            with logging_tab:
+                st.subheader("Response Details")
+                st.write("Response Status:", response.status_code)
+                st.write("Response Headers:", dict(response.headers))
+                st.json(response.json())
+            
+            with results_tab:
+                if response.ok:
+                    results = response.json().get('results', [])
+                    
+                    if results:
+                        # Filter results based on minimum similarity
+                        filtered_results = [r for r in results if r.get('similarity_score', 0) >= min_similarity]
+                        
+                        if not filtered_results:
+                            st.warning("No results match your filter criteria.")
+                            return
+                        
+                        # Sort results
+                        if sort_by == "Similarity":
+                            filtered_results.sort(key=lambda x: x.get('similarity_score', 0), reverse=True)
+                        
+                        # Display results count with material design
+                        st.markdown(f"""
+                            <div class="results-count">
+                                📸 Found {len(filtered_results)} images
+                            </div>
+                            """, 
+                            unsafe_allow_html=True
+                        )
+                        
+                        # Create grid layout with 6 columns
+                        cols = st.columns(6)
+                        for idx, result in enumerate(filtered_results):
+                            with cols[idx % 6]:
+                                with st.container():
+                                    # Get image URL from processed_image_path
+                                    image_url = result.get('metadata', {}).get('processed_image_path', '')
+                                    if image_url.startswith('gs://'):
+                                        # Convert GCS path to public URL if needed
+                                        bucket_name = image_url.split('/')[2]
+                                        blob_name = '/'.join(image_url.split('/')[3:])
+                                        image_url = f"https://storage.googleapis.com/{bucket_name}/{blob_name}"
                                     
-                                    st.markdown("**Tags**")
-                                    tags_html = " ".join([
-                                        f'<span class="tag">{tag}</span>' 
-                                        for tag in result['metadata'].get('tags', [])
-                                    ])
-                                    st.markdown(tags_html, unsafe_allow_html=True)
+                                    # Image card with hover effect
+                                    st.image(
+                                        image_url,
+                                        use_column_width=True
+                                    )
                                     
-                                    st.markdown("**Properties**")
-                                    col1, col2 = st.columns(2)
-                                    with col1:
-                                        st.write("Size:", result['metadata'].get('size', 'N/A'))
-                                    with col2:
-                                        st.write("Added:", result['metadata'].get('date_added', 'N/A'))
-            else:
-                st.warning("No results found")
+                                    # Similarity score
+                                    similarity = result.get('similarity_score', 0)
+                                    st.progress(similarity, text=f"Similarity: {similarity:.0%}")
+                                    
+                                    # Metadata expansion
+                                    with st.expander("Details"):
+                                        metadata = result.get('metadata', {})
+                                        
+                                        if metadata:
+                                            st.markdown('<p class="metadata-text"><strong>Context</strong></p>', unsafe_allow_html=True)
+                                            st.markdown(f'<p class="metadata-text">{metadata.get("context", "N/A")}</p>', unsafe_allow_html=True)
+                                            
+                                            st.markdown('<p class="metadata-text"><strong>Characteristics</strong></p>', unsafe_allow_html=True)
+                                            characteristics = metadata.get('characteristics', '').split(',')
+                                            tags_html = " ".join([
+                                                f'<span class="tag">{tag.strip()}</span>' 
+                                                for tag in characteristics if tag.strip()
+                                            ])
+                                            st.markdown(tags_html, unsafe_allow_html=True)
+                                            
+                                            st.markdown('<p class="metadata-text"><strong>Objects</strong></p>', unsafe_allow_html=True)
+                                            st.markdown(f'<p class="metadata-text">{metadata.get("objects", "N/A")}</p>', unsafe_allow_html=True)
+                                            
+                                            st.markdown('<p class="metadata-text"><strong>Properties</strong></p>', unsafe_allow_html=True)
+                                            col1, col2 = st.columns(2)
+                                            with col1:
+                                                st.markdown(f'<p class="metadata-text">Type: {metadata.get("content_type", "N/A")}</p>', unsafe_allow_html=True)
+                                            with col2:
+                                                st.markdown(f'<p class="metadata-text">Created: {metadata.get("created_at", "N/A")}</p>', unsafe_allow_html=True)
+                    else:
+                        st.warning("No results found")
+                else:
+                    st.error(f"Error: {response.status_code} - {response.text}")
     elif search_button:
         st.warning("Please enter a search query")
     else:
         # Show welcome message when no search is performed
-        st.markdown("""
-            ### 👋 Welcome to Image Search!
-            
-            Start by typing your search query above. You can:
-            - Search for similar images using natural language
-            - Filter results by similarity score
-            - Sort results by different criteria
-            - View detailed image information
-            
-            Use the sidebar to customize your search experience.
-        """)
+        with results_tab:
+            st.markdown("""
+                ### 👋 Welcome to Image Search!
+                
+                Start by typing your search query above. You can:
+                - Search for similar images using natural language
+                - Filter results by similarity score
+                - Sort results by different criteria
+                - View detailed image information
+                
+                Use the sidebar to customize your search experience.
+            """)
 
 if __name__ == "__main__":
     main() 
