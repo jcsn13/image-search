@@ -21,7 +21,7 @@ from embedding import EmbeddingGenerator
 from vector_store import VectorSearchClient
 import logging
 import os
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from location_service import LocationService
 import json
 
@@ -48,12 +48,72 @@ logger.info("All services initialized successfully")
 PROCESSED_BUCKET = os.environ.get('PROCESSED_BUCKET')
 logger.info(f"Using processed bucket: {PROCESSED_BUCKET}")
 
+def extract_location_from_path(file_path: str) -> Optional[str]:
+    """
+    Extract location from file path, handling nested folders.
+    The location is considered to be either:
+    1. The first folder in the path
+    2. A combination of nested folders joined by underscores
+    
+    Args:
+        file_path (str): The full path of the file in the bucket
+        
+    Returns:
+        Optional[str]: The extracted location or None if path is invalid
+    """
+    if not file_path or '/' not in file_path:
+        return None
+        
+    # Split the path and remove the filename
+    path_parts = file_path.split('/')
+    if len(path_parts) < 2:
+        return None
+        
+    # If there's metadata indicating we should use the full path
+    # join all folder names with underscores
+    if len(path_parts) > 2 and path_parts[-1].startswith('full_path_'):
+        return '_'.join(path_parts[:-1])
+    
+    # Otherwise, use just the first folder as location
+    return path_parts[0]
+
+def get_cloud_event_data(cloud_event: Any) -> Dict[str, Any]:
+    """
+    Safely extract data from a cloud event object.
+    
+    Args:
+        cloud_event: The cloud event object
+        
+    Returns:
+        Dict containing the event data
+    """
+    event_data = {}
+    
+    # Extract basic event information
+    if hasattr(cloud_event, 'id'):
+        event_data['id'] = cloud_event.id
+    if hasattr(cloud_event, 'source'):
+        event_data['source'] = cloud_event.source
+    if hasattr(cloud_event, 'type'):
+        event_data['type'] = cloud_event.type
+    if hasattr(cloud_event, 'time'):
+        event_data['time'] = str(cloud_event.time)
+    
+    # Extract the data attribute if it exists
+    if hasattr(cloud_event, 'data'):
+        event_data['data'] = cloud_event.data
+    
+    return event_data
+
 @functions_framework.cloud_event
 def process_image(cloud_event: Dict[str, Any]) -> tuple[str, int]:
     """Process uploaded images with Gemini and generate embeddings"""
     try:
         logger.info("Starting image processing function")
-        logger.info(f"Cloud event: {json.dumps(cloud_event)}")
+        
+        # Safely extract and log cloud event data
+        event_data = get_cloud_event_data(cloud_event)
+        logger.info(f"Cloud event data: {json.dumps(event_data)}")
         
         # Extract data from cloud event
         if not hasattr(cloud_event, 'data'):
@@ -61,7 +121,7 @@ def process_image(cloud_event: Dict[str, Any]) -> tuple[str, int]:
             return "No data in cloud event", 400
             
         data = cloud_event.data
-        logger.info(f"Event data: {json.dumps(data)}")
+        logger.info(f"Storage event data: {json.dumps(data)}")
         
         bucket_name = data.get("bucket")
         file_name = data.get("name")
@@ -83,13 +143,13 @@ def process_image(cloud_event: Dict[str, Any]) -> tuple[str, int]:
         logger.info(f"Blob metadata: {blob.metadata}")
         logger.info(f"Blob: {blob}")
         
-        local_path = f"/tmp/{file_name}"
+        local_path = f"/tmp/{os.path.basename(file_name)}"
         logger.info(f"Downloading to {local_path}")
         blob.download_to_filename(local_path)
         logger.info("File downloaded successfully")
         
-        # Get location from metadata
-        logger.info("Extracting location from metadata")
+        # Get location from metadata or path
+        logger.info("Extracting location information")
         location_name = None
         if blob.metadata:
             location_name = blob.metadata.get('location')
@@ -98,8 +158,7 @@ def process_image(cloud_event: Dict[str, Any]) -> tuple[str, int]:
         # Try to get location from file path if metadata is missing
         if not location_name:
             logger.info("No location in metadata, trying file path")
-            # The file_name format is "Location_Name/filename.jpg", so we extract the location
-            location_name = file_name.split('/')[0] if '/' in file_name else None
+            location_name = extract_location_from_path(file_name)
             logger.info(f"Extracted location name from path: {location_name}")
         
         # Get location details
