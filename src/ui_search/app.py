@@ -332,10 +332,8 @@ def init_session_state():
         st.session_state.total_results = 0
     if 'query' not in st.session_state:
         st.session_state.query = ""
-    if 'filtered_results' not in st.session_state:
-        st.session_state.filtered_results = []
-    if 'min_similarity' not in st.session_state:
-        st.session_state.min_similarity = 0.5
+    if 'results' not in st.session_state:
+        st.session_state.results = []
     if 'max_results' not in st.session_state:
         st.session_state.max_results = 20
 
@@ -369,21 +367,6 @@ def main():
             st.rerun()
             
         st.divider()
-        st.markdown("### Filters")
-        min_similarity = st.slider("Minimum similarity", 0.0, 1.0, 
-                                 st.session_state.min_similarity,
-                                 help="Filter results by minimum similarity score",
-                                 key="min_similarity_slider")
-        
-        # Update filtered results if similarity threshold changes
-        if min_similarity != st.session_state.min_similarity and st.session_state.filtered_results:
-            st.session_state.min_similarity = min_similarity
-            st.session_state.filtered_results = [
-                r for r in st.session_state.filtered_results 
-                if r.get('similarity_score', 0) >= min_similarity
-            ]
-            st.rerun()
-
         sort_by = st.selectbox("Sort results by", 
                              ["Similarity", "Date", "Name"],
                              help="Choose how to sort the search results")
@@ -427,35 +410,28 @@ def main():
                     results = response.json().get('results', [])
                     
                     if results:
-                        # Filter and store results if it's a new search
-                        if not st.session_state.filtered_results:
-                            st.session_state.filtered_results = [
-                                r for r in results 
-                                if r.get('similarity_score', 0) >= min_similarity
-                            ]
+                        # Store results if it's a new search
+                        if not st.session_state.results:
+                            st.session_state.results = results
                         
-                        filtered_results = st.session_state.filtered_results
-                        
-                        if not filtered_results:
-                            st.warning("No results match your filter criteria.")
-                            return
+                        display_results = st.session_state.results
                         
                         # Sort results
                         if sort_by == "Similarity":
-                            filtered_results.sort(key=lambda x: x.get('similarity_score', 0), reverse=True)
+                            display_results.sort(key=lambda x: x.get('similarity_score', 0), reverse=True)
                         elif sort_by == "Date":
-                            filtered_results.sort(
+                            display_results.sort(
                                 key=lambda x: x.get('metadata', {}).get('created_at', ''),
                                 reverse=True
                             )
                         elif sort_by == "Name":
-                            filtered_results.sort(
+                            display_results.sort(
                                 key=lambda x: x.get('metadata', {}).get('file_name', '').lower()
                             )
                         
                         # Limit results based on user selection
-                        total_results = len(filtered_results)
-                        display_results = filtered_results[:st.session_state.max_results]
+                        total_results = len(display_results)
+                        display_results = display_results[:st.session_state.max_results]
                         
                         # Display results count with material design
                         st.markdown(f"""
