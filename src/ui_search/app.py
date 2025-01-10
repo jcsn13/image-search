@@ -2,6 +2,11 @@ import streamlit as st
 import requests
 from typing import List, Dict
 from mock_data import get_mock_results
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Set page config for a wider layout
 st.set_page_config(
@@ -111,7 +116,9 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # Constants
-API_ENDPOINT = "https://image-search-api-958356772890.us-central1.run.app"
+API_ENDPOINT = os.getenv('API_ENDPOINT')
+if not API_ENDPOINT:
+    raise ValueError("API_ENDPOINT environment variable is not set")
 
 def search_images(query: str, use_mock: bool = True) -> List[Dict]:
     """
