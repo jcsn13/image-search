@@ -288,6 +288,10 @@ def search_images(query: str, use_mock: bool = False):
         
         return ErrorResponse(e)
 
+def clamp(value, min_val=0.0, max_val=1.0):
+    """Clamp a value between min and max values."""
+    return max(min_val, min(value, max_val))
+
 def main():
     # Sidebar for settings
     with st.sidebar:
@@ -390,7 +394,8 @@ def main():
                                     
                                     # Similarity score
                                     similarity = result.get('similarity_score', 0)
-                                    st.progress(similarity, text=f"Similarity: {similarity:.0%}")
+                                    clamped_similarity = clamp(similarity)
+                                    st.progress(clamped_similarity, text=f"Similarity: {similarity:.0%}")
                                     
                                     # Metadata expansion
                                     with st.expander("Details"):

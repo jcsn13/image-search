@@ -18,7 +18,7 @@ from google.cloud import aiplatform
 from google.cloud import storage
 from google.cloud import firestore
 import numpy as np
-from typing import Dict, Any
+from typing import Dict, Any, Tuple
 import os
 import json
 import logging
@@ -60,6 +60,19 @@ class VectorSearchClient:
         )
         logger.info(f"Initialized endpoint with index: {self.endpoint.resource_name}")
     
+    def _extract_file_info(self, full_path: str) -> Tuple[str, str]:
+        """
+        Extract filename and directory path from full path.
+        
+        Args:
+            full_path: Complete file path including directories
+            
+        Returns:
+            Tuple of (filename, full_path)
+        """
+        filename = os.path.basename(full_path)
+        return filename, full_path
+    
     def _upload_to_gcs(self, data: Dict[str, Any], blob_name: str) -> str:
         """
         Upload data to GCS for backup/record keeping
@@ -83,14 +96,14 @@ class VectorSearchClient:
         Store metadata in Firestore
         
         Args:
-            id: Unique identifier for the embedding
+            id: Unique identifier for the embedding (filename)
             metadata: Metadata to store
         """
         try:
             # Add timestamp to metadata
             metadata['created_at'] = firestore.SERVER_TIMESTAMP
             
-            # Store in Firestore
+            # Store in Firestore using the filename as ID
             doc_ref = self.db.collection('index_metadata').document(id)
             doc_ref.set(metadata)
             logger.info(f"Stored metadata in Firestore for id: {id}")
@@ -110,7 +123,7 @@ class VectorSearchClient:
         
         Args:
             embedding: Normalized embedding vector
-            id: Unique identifier for the embedding
+            id: Full path of the file
             metadata: Additional metadata to store
         """
         try:
@@ -118,24 +131,29 @@ class VectorSearchClient:
             if isinstance(embedding, np.ndarray):
                 embedding = embedding.tolist()
             
+            # Extract filename and keep full path in metadata
+            filename, full_path = self._extract_file_info(id)
+            metadata['full_path'] = full_path
+            
             # Prepare data for backup storage
             storage_data = {
-                "id": id,
+                "id": filename,
+                "full_path": full_path,
                 "embedding": embedding,
                 "metadata": metadata
             }
             
             # Upload to GCS for backup
-            blob_name = f"embeddings/{id}.json"
+            blob_name = f"embeddings/{filename}.json"
             gcs_uri = self._upload_to_gcs(storage_data, blob_name)
             logger.info(f"Backed up embedding data to {gcs_uri}")
             
             # Store metadata in Firestore
-            self._store_metadata_in_firestore(id, metadata)
+            self._store_metadata_in_firestore(filename, metadata)
             
             # Prepare datapoint for streaming update (vector only)
             datapoint = {
-                "datapoint_id": id,
+                "datapoint_id": filename,
                 "feature_vector": embedding,
             }
             
@@ -143,7 +161,7 @@ class VectorSearchClient:
             response = self.endpoint.upsert_datapoints(
                 datapoints=[datapoint]
             )
-            logger.info(f"Successfully streamed embedding with id: {id}")
+            logger.info(f"Successfully streamed embedding with id: {filename}")
             
         except Exception as e:
             logger.error(f"Error upserting embedding: {e}")

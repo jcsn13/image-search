@@ -96,7 +96,16 @@ class VectorSearchService:
             num_neighbors: int = 10,
             distance_threshold: float = 0.0
         ) -> List[SearchResult]:
-            """Search for similar vectors"""
+            """
+            Search for similar vectors
+            
+            Note: Using dot product distance metric. Since we normalize the vectors,
+            the raw similarity would give us values from -1 (opposite) to 1 (identical).
+            We normalize this to a 0-1 range where:
+            - 1.0 means identical vectors
+            - 0.0 means opposite vectors
+            - 0.5 means orthogonal vectors
+            """
             try:
                 # Convert embedding to list if it's numpy array
                 if isinstance(query_embedding, np.ndarray):
@@ -110,11 +119,15 @@ class VectorSearchService:
                 )
 
                 results = []
-                # Process the nearest neighbors - response is a list and [0] contains the neighbors for our query
+                # Process the nearest neighbors
                 for neighbor in response[0]:
-                    # Skip results above distance threshold
-                    distance = neighbor.distance
-                    if distance > distance_threshold:
+                    # Convert distance to dot product similarity (-1 to 1)
+                    dot_product = 1.0 - neighbor.distance
+                    # Normalize to 0-1 range
+                    normalized_score = (dot_product + 1) / 2
+
+                    # Skip results below similarity threshold
+                    if normalized_score < distance_threshold:
                         continue
 
                     # Get metadata from Firestore using the neighbor.id
@@ -129,7 +142,7 @@ class VectorSearchService:
 
                     results.append(SearchResult(
                         id=neighbor.id,
-                        score=1.0 - distance,  # Convert distance to similarity score
+                        score=normalized_score,  # Score is now in 0-1 range
                         metadata=metadata
                     ))
 
