@@ -120,17 +120,25 @@ class LocationService:
                 logger.warning('No location name provided')
                 return None
                 
-            # Clean up location name - replace underscores with spaces
+            # Clean up location name - replace underscores with spaces and remove file extension
             original_name = location_name
-            location_name = location_name.replace('_', ' ')
+            location_name = location_name.replace('_', ' ').strip()
+            
+            # Remove any file extensions that might have been included
+            location_name = location_name.split('.')[0]
+            
             logger.info(f'Cleaned location name from "{original_name}" to "{location_name}"')
             
             # Use places API to search for the location
             logger.info(f'Calling Google Places API for: {location_name}')
-            places_result = self.gmaps.places(location_name)
-            logger.info(f'Places API raw response: {json.dumps(places_result)}')
+            try:
+                places_result = self.gmaps.places(location_name)
+                logger.info(f'Places API raw response: {json.dumps(places_result)}')
+            except Exception as e:
+                logger.error(f'Error calling Places API: {str(e)}', exc_info=True)
+                return None
             
-            if not places_result.get('results'):
+            if not places_result or not places_result.get('results'):
                 logger.warning(f'No results found in Places API response for: {location_name}')
                 return None
             
@@ -141,13 +149,20 @@ class LocationService:
             
             # Get detailed information using reverse geocoding
             logger.info('Calling reverse geocoding with found coordinates')
-            location_details = self.get_location_details_from_coordinates(
-                latitude=location['lat'],
-                longitude=location['lng']
-            )
+            try:
+                location_details = self.get_location_details_from_coordinates(
+                    latitude=location['lat'],
+                    longitude=location['lng']
+                )
+            except Exception as e:
+                logger.error(f'Error in reverse geocoding: {str(e)}', exc_info=True)
+                return None
             
             if location_details:
                 logger.info(f'Successfully got location details for {location_name}')
+                # Add the original query for reference
+                location_details['original_query'] = original_name
+                location_details['cleaned_query'] = location_name
             else:
                 logger.warning(f'Failed to get location details for {location_name}')
             

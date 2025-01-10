@@ -23,6 +23,7 @@ import logging
 import os
 from typing import Dict, Any
 from location_service import LocationService
+import json
 
 # Configure logging
 logging.basicConfig(
@@ -52,9 +53,22 @@ def process_image(cloud_event: Dict[str, Any]) -> tuple[str, int]:
     """Process uploaded images with Gemini and generate embeddings"""
     try:
         logger.info("Starting image processing function")
+        logger.info(f"Cloud event: {json.dumps(cloud_event)}")
+        
+        # Extract data from cloud event
+        if not hasattr(cloud_event, 'data'):
+            logger.error("No data in cloud event")
+            return "No data in cloud event", 400
+            
         data = cloud_event.data
-        bucket_name = data["bucket"]
-        file_name = data["name"]
+        logger.info(f"Event data: {json.dumps(data)}")
+        
+        bucket_name = data.get("bucket")
+        file_name = data.get("name")
+        
+        if not bucket_name or not file_name:
+            logger.error(f"Missing required data - bucket: {bucket_name}, file: {file_name}")
+            return "Missing required data", 400
         
         logger.info(f"Processing image: {file_name} from bucket: {bucket_name}")
         
@@ -62,6 +76,10 @@ def process_image(cloud_event: Dict[str, Any]) -> tuple[str, int]:
         logger.info("Getting bucket and blob...")
         bucket = storage_client.bucket(bucket_name)
         blob = bucket.blob(file_name)
+        
+        # Reload the blob to ensure we have the latest metadata
+        blob.reload()
+        
         logger.info(f"Blob metadata: {blob.metadata}")
         logger.info(f"Blob: {blob}")
         
@@ -72,8 +90,10 @@ def process_image(cloud_event: Dict[str, Any]) -> tuple[str, int]:
         
         # Get location from metadata
         logger.info("Extracting location from metadata")
-        location_name = blob.metadata.get('location') if blob.metadata else None
-        logger.info(f"Extracted location name from metadata: {location_name}")
+        location_name = None
+        if blob.metadata:
+            location_name = blob.metadata.get('location')
+            logger.info(f"Found location in metadata: {location_name}")
         
         # Try to get location from file path if metadata is missing
         if not location_name:
@@ -82,9 +102,18 @@ def process_image(cloud_event: Dict[str, Any]) -> tuple[str, int]:
             location_name = file_name.split('/')[0] if '/' in file_name else None
             logger.info(f"Extracted location name from path: {location_name}")
         
-        logger.info(f"Calling location service with name: {location_name}")
-        location_info = location_service.get_location_details(location_name) if location_name else None
-        logger.info(f"Retrieved location info: {location_info}")
+        # Get location details
+        location_info = None
+        if location_name:
+            try:
+                logger.info(f"Calling location service with name: {location_name}")
+                location_info = location_service.get_location_details(location_name)
+                logger.info(f"Retrieved location info: {location_info}")
+            except Exception as e:
+                logger.error(f"Error getting location details: {str(e)}", exc_info=True)
+                # Continue processing even if location lookup fails
+        else:
+            logger.warning("No location name found in metadata or path")
         
         # Analyze with Gemini
         analysis = analyzer.analyze_image(local_path)
