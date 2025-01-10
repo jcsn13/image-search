@@ -116,18 +116,22 @@ class LocationService:
                 logger.warning('location_service: no location name provided')
                 return None
                 
-            logger.info(f'location_service: requesting location details for {location_name}')
+            # Clean up location name - replace underscores with spaces
+            location_name = location_name.replace('_', ' ')
+            logger.info(f'location_service: searching for location: {location_name}')
             
             # Use places API to search for the location
             places_result = self.gmaps.places(location_name)
+            logger.info(f'location_service: places API response: {json.dumps(places_result)}')
             
-            if not places_result['results']:
+            if not places_result.get('results'):
                 logger.warning(f'location_service: no results found for location name: {location_name}')
                 return None
             
             # Get the first (most relevant) result
             place = places_result['results'][0]
             location = place['geometry']['location']
+            logger.info(f'location_service: found coordinates - lat: {location["lat"]}, lng: {location["lng"]}')
             
             # Get detailed information using reverse geocoding
             return self.get_location_details_from_coordinates(

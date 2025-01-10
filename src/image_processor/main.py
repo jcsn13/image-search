@@ -50,13 +50,23 @@ def process_image(cloud_event: Dict[str, Any]) -> tuple[str, int]:
         # Download image
         bucket = storage_client.bucket(bucket_name)
         blob = bucket.blob(file_name)
+        logger.info(f"Blob metadata: {blob.metadata}")
+        
         local_path = f"/tmp/{file_name}"
         blob.download_to_filename(local_path)
         
         # Get location from metadata
         location_name = blob.metadata.get('location') if blob.metadata else None
+        logger.info(f"Extracted location name from metadata: {location_name}")
+        
+        # Try to get location from file path if metadata is missing
+        if not location_name:
+            # The file_name format is "Location_Name/filename.jpg", so we extract the location
+            location_name = file_name.split('/')[0] if '/' in file_name else None
+            logger.info(f"Extracted location name from path: {location_name}")
+        
         location_info = location_service.get_location_details(location_name) if location_name else None
-        logger.info(f"Retrieved location info from metadata: {location_name}")
+        logger.info(f"Retrieved location info: {location_info}")
         
         # Analyze with Gemini
         analysis = analyzer.analyze_image(local_path)
