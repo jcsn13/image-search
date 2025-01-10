@@ -34,6 +34,7 @@ class VectorSearchService:
         self.location = os.environ.get('REGION')
         self.index_id = os.environ.get('VECTOR_SEARCH_INDEX')
         self.bucket_name = os.environ.get('PROCESSED_BUCKET')
+        self.deployed_index_id = os.environ.get('DEPLOYED_INDEX_ID')
 
         if not all([self.project_id, self.location, self.index_id]):
             raise ValueError(
@@ -48,11 +49,11 @@ class VectorSearchService:
         )
 
         # Initialize Vector Search index
-        self.index = aiplatform.MatchingEngineIndex(
-            index_name=self.index_id
+        self.index = aiplatform.MatchingEngineIndexEndpoint(
+            index_endpoint_name=self.deployed_index_id.split("/deployedIndex")[0]
         )
         
-        # Initialize multimodal embedding model - same as processor
+        # Initialize multimodal embedding model
         self.embedding_model = MultiModalEmbeddingModel.from_pretrained("multimodalembedding")
         
         # Initialize storage client
@@ -64,7 +65,7 @@ class VectorSearchService:
         embeddings = self.embedding_model.get_embeddings(
             image=None,  # No image for text-only query
             contextual_text=text,
-            dimension=1408  # Same dimension as processor
+            dimension=1408
         )
         
         # Get text embedding from model response
@@ -72,45 +73,48 @@ class VectorSearchService:
         return embedding_array / np.linalg.norm(embedding_array)
 
     def search_similar(
-        self,
-        query_embedding: np.ndarray,
-        num_neighbors: int = 10,
-        distance_threshold: float = 0.5
-    ) -> List[SearchResult]:
-        """Search for similar vectors"""
-        try:
-            # Convert embedding to list if it's numpy array
-            if isinstance(query_embedding, np.ndarray):
-                query_embedding = query_embedding.tolist()
+            self,
+            query_embedding: np.ndarray,
+            num_neighbors: int = 10,
+            distance_threshold: float = 0.0
+        ) -> List[SearchResult]:
+            """Search for similar vectors"""
+            try:
+                # Convert embedding to list if it's numpy array
+                if isinstance(query_embedding, np.ndarray):
+                    query_embedding = query_embedding.tolist()
 
-            # Query the index
-            response = self.index.find_neighbors(
-                query_embedding,
-                num_neighbors=num_neighbors,
-            )
+                # Query the index endpoint
+                response = self.index.find_neighbors(
+                    deployed_index_id="deployed_image_search_index",
+                    queries=[query_embedding],
+                    num_neighbors=num_neighbors
+                )
 
-            results = []
-            for match in response:
-                # Skip results above distance threshold
-                if match.distance > distance_threshold:
-                    continue
+                results = []
+                # Process the nearest neighbors - response is a list and [0] contains the neighbors for our query
+                for neighbor in response[0]:
+                    # Skip results above distance threshold
+                    distance = neighbor.distance
+                    if distance > distance_threshold:
+                        continue
 
-                # Get metadata from GCS
-                try:
-                    blob = self.bucket.blob(f"embeddings/{match.id}.json")
-                    metadata = json.loads(blob.download_as_string())['metadata']
-                except Exception as e:
-                    logger.error(f"Error fetching metadata for {match.id}: {e}")
-                    metadata = {}
+                    # Get metadata from GCS
+                    try:
+                        blob = self.bucket.blob(f"embeddings/{neighbor.id}.json")
+                        metadata = json.loads(blob.download_as_string())['metadata']
+                    except Exception as e:
+                        logger.error(f"Error fetching metadata for {neighbor.id}: {e}")
+                        metadata = {}
 
-                results.append(SearchResult(
-                    id=match.id,
-                    score=1.0 - match.distance,  # Convert distance to similarity score
-                    metadata=metadata
-                ))
+                    results.append(SearchResult(
+                        id=neighbor.id,
+                        score=1.0 - distance,  # Convert distance to similarity score
+                        metadata=metadata
+                    ))
 
-            return results
+                return results
 
-        except Exception as e:
-            logger.error(f"Error searching similar vectors: {e}")
-            raise
+            except Exception as e:
+                logger.error(f"Error searching similar vectors: {e}", exc_info=True)  # Added exc_info for better debugging
+                raise

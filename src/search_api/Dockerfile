@@ -1,11 +1,18 @@
 FROM python:3.9-slim
 
-# Install production dependencies
-COPY . .
-RUN pip install -r requirements.txt
-
-# Copy local code to container image
+# Set working directory
 WORKDIR /app
 
-# Run the web service on container startup
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 main:app
+# Copy requirements and install dependencies
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+# Copy application code
+COPY . .
+
+# Set environment variables
+ENV PORT=8080
+ENV PYTHONPATH=/app
+
+# Start the application using gunicorn
+CMD exec gunicorn --bind :$PORT --chdir /app main:app
