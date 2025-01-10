@@ -53,6 +53,11 @@ def process_image(cloud_event: Dict[str, Any]) -> tuple[str, int]:
         local_path = f"/tmp/{file_name}"
         blob.download_to_filename(local_path)
         
+        # Get location from metadata
+        location_name = blob.metadata.get('location') if blob.metadata else None
+        location_info = location_service.get_location_details(location_name) if location_name else None
+        logger.info(f"Retrieved location info from metadata: {location_name}")
+        
         # Analyze with Gemini
         analysis = analyzer.analyze_image(local_path)
         logger.info(f"Generated analysis for {file_name}")
@@ -63,9 +68,6 @@ def process_image(cloud_event: Dict[str, Any]) -> tuple[str, int]:
             text_context=analysis.to_combined_text()
         )
         logger.info(f"Generated embedding for {file_name}")
-        
-        # Get location information
-        location_info = location_service.extract_location_from_image(local_path)
         
         # Store in Vector Search
         metadata = {

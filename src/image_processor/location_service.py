@@ -109,8 +109,38 @@ class LocationService:
             logger.error(f'location_service: failed to extract location from image - path: {image_path}, error: {str(e)}')
             return None
 
-    def get_location_details(self, latitude: float, longitude: float) -> Dict:
-        """Get location details from Google Maps API"""
+    def get_location_details(self, location_name: str) -> Optional[Dict]:
+        """Get location details from a location name using Google Maps API"""
+        try:
+            if not location_name:
+                logger.warning('location_service: no location name provided')
+                return None
+                
+            logger.info(f'location_service: requesting location details for {location_name}')
+            
+            # Use places API to search for the location
+            places_result = self.gmaps.places(location_name)
+            
+            if not places_result['results']:
+                logger.warning(f'location_service: no results found for location name: {location_name}')
+                return None
+            
+            # Get the first (most relevant) result
+            place = places_result['results'][0]
+            location = place['geometry']['location']
+            
+            # Get detailed information using reverse geocoding
+            return self.get_location_details_from_coordinates(
+                latitude=location['lat'],
+                longitude=location['lng']
+            )
+            
+        except Exception as e:
+            logger.error(f'location_service: failed to get location details for name: {location_name}, error: {str(e)}')
+            return None
+
+    def get_location_details_from_coordinates(self, latitude: float, longitude: float) -> Optional[Dict]:
+        """Get location details from coordinates using Google Maps API"""
         try:
             logger.info(f'location_service: requesting location details - lat: {latitude}, lon: {longitude}')
             reverse_geocode_result = self.gmaps.reverse_geocode((latitude, longitude))
