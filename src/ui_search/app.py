@@ -133,6 +133,38 @@ st.markdown("""
         margin: 0;
         padding: 0;
     }
+
+    /* Pagination Controls */
+    .pagination-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 2rem 0;
+        gap: 1rem;
+    }
+    
+    .pagination-info {
+        background-color: var(--md-surface);
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        box-shadow: var(--md-elevation-1);
+    }
+
+    /* Image Grid */
+    .image-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 1rem;
+        padding: 1rem;
+    }
+
+    .image-card {
+        background: var(--md-surface);
+        border-radius: 8px;
+        box-shadow: var(--md-elevation-1);
+        overflow: hidden;
+        height: 100%;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -292,24 +324,69 @@ def clamp(value, min_val=0.0, max_val=1.0):
     """Clamp a value between min and max values."""
     return max(min_val, min(value, max_val))
 
+def init_session_state():
+    """Initialize session state variables"""
+    if 'search_performed' not in st.session_state:
+        st.session_state.search_performed = False
+    if 'total_results' not in st.session_state:
+        st.session_state.total_results = 0
+    if 'query' not in st.session_state:
+        st.session_state.query = ""
+    if 'filtered_results' not in st.session_state:
+        st.session_state.filtered_results = []
+    if 'min_similarity' not in st.session_state:
+        st.session_state.min_similarity = 0.5
+    if 'max_results' not in st.session_state:
+        st.session_state.max_results = 20
+
+def reset_search_state():
+    """Reset search-related state when performing a new search"""
+    st.session_state.search_performed = True
+    st.session_state.filtered_results = []
+
 def main():
+    # Initialize session state
+    init_session_state()
+    
     # Sidebar for settings
     with st.sidebar:
         st.title("⚙️ Settings")
         use_mock = st.toggle("Use mock data", value=False)
         st.divider()
+        st.markdown("### Display Settings")
+        # Add maximum results selector
+        max_results = st.select_slider(
+            "Maximum results to display",
+            options=[5, 10, 20, 50, 100],
+            value=st.session_state.max_results,
+            key="max_results_slider",
+            help="Select how many results to show"
+        )
+        
+        # Update max results if changed
+        if max_results != st.session_state.max_results:
+            st.session_state.max_results = max_results
+            st.rerun()
+            
+        st.divider()
         st.markdown("### Filters")
-        min_similarity = st.slider("Minimum similarity", 0.0, 1.0, 0.5, 
-                                 help="Filter results by minimum similarity score")
+        min_similarity = st.slider("Minimum similarity", 0.0, 1.0, 
+                                 st.session_state.min_similarity,
+                                 help="Filter results by minimum similarity score",
+                                 key="min_similarity_slider")
+        
+        # Update filtered results if similarity threshold changes
+        if min_similarity != st.session_state.min_similarity and st.session_state.filtered_results:
+            st.session_state.min_similarity = min_similarity
+            st.session_state.filtered_results = [
+                r for r in st.session_state.filtered_results 
+                if r.get('similarity_score', 0) >= min_similarity
+            ]
+            st.rerun()
+
         sort_by = st.selectbox("Sort results by", 
                              ["Similarity", "Date", "Name"],
                              help="Choose how to sort the search results")
-        st.divider()
-        st.markdown("### About")
-        st.markdown("""
-            Image Search uses advanced AI to find similar images 
-            in your collection based on visual features and content.
-        """)
     
     # Main content
     st.title("🔍 Image Search")
@@ -319,7 +396,8 @@ def main():
         col1, col2 = st.columns([4, 1])
         with col1:
             query = st.text_input("", 
-                                placeholder="Search images by description or content...", 
+                                placeholder="Search images by description or content...",
+                                key="search_input",
                                 label_visibility="collapsed")
         with col2:
             search_button = st.button("Search", type="primary", use_container_width=True)
@@ -329,6 +407,11 @@ def main():
     
     # Handle search
     if search_button and query:
+        # Reset search state if it's a new query
+        if query != st.session_state.query:
+            reset_search_state()
+            st.session_state.query = query
+            
         with st.spinner("🔍 Searching for images..."):
             response = search_images(query, use_mock=use_mock)
             
@@ -344,8 +427,14 @@ def main():
                     results = response.json().get('results', [])
                     
                     if results:
-                        # Filter results based on minimum similarity
-                        filtered_results = [r for r in results if r.get('similarity_score', 0) >= min_similarity]
+                        # Filter and store results if it's a new search
+                        if not st.session_state.filtered_results:
+                            st.session_state.filtered_results = [
+                                r for r in results 
+                                if r.get('similarity_score', 0) >= min_similarity
+                            ]
+                        
+                        filtered_results = st.session_state.filtered_results
                         
                         if not filtered_results:
                             st.warning("No results match your filter criteria.")
@@ -354,20 +443,33 @@ def main():
                         # Sort results
                         if sort_by == "Similarity":
                             filtered_results.sort(key=lambda x: x.get('similarity_score', 0), reverse=True)
+                        elif sort_by == "Date":
+                            filtered_results.sort(
+                                key=lambda x: x.get('metadata', {}).get('created_at', ''),
+                                reverse=True
+                            )
+                        elif sort_by == "Name":
+                            filtered_results.sort(
+                                key=lambda x: x.get('metadata', {}).get('file_name', '').lower()
+                            )
+                        
+                        # Limit results based on user selection
+                        total_results = len(filtered_results)
+                        display_results = filtered_results[:st.session_state.max_results]
                         
                         # Display results count with material design
                         st.markdown(f"""
                             <div class="results-count">
-                                📸 Found {len(filtered_results)} images
+                                📸 Showing {len(display_results)} of {total_results} images
                             </div>
                             """, 
                             unsafe_allow_html=True
                         )
                         
-                        # Create grid layout with 6 columns
-                        cols = st.columns(6)
-                        for idx, result in enumerate(filtered_results):
-                            with cols[idx % 6]:
+                        # Create grid layout with 5 columns for better alignment
+                        cols = st.columns(5)
+                        for idx, result in enumerate(display_results):
+                            with cols[idx % 5]:
                                 with st.container():
                                     # Get image URL from processed_image_path
                                     image_url = result.get('metadata', {}).get('processed_image_path', '')
