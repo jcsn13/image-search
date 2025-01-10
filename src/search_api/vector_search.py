@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
 from google.cloud import aiplatform
 from google.cloud import storage
 from google.cloud import firestore
@@ -25,6 +24,7 @@ from typing import List
 import logging
 import json
 from models import SearchResult
+from math import sqrt
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +96,13 @@ class VectorSearchService:
             num_neighbors: int = 10,
             distance_threshold: float = 0.0
         ) -> List[SearchResult]:
-            """Search for similar vectors"""
+            """
+            Search for similar vectors
+            
+             Note: When searching using Matching Engine the value of `distance`  is the result of using an *euclidean distance* calculation on your vectors. 
+             Since we are using cosine similarity that means: cosine distance derived from an euclidean distance needs to be calculated.
+             The value you want will be from -1(opposite vectors) to 1 (identical vectors).
+            """
             try:
                 # Convert embedding to list if it's numpy array
                 if isinstance(query_embedding, np.ndarray):
@@ -110,11 +116,15 @@ class VectorSearchService:
                 )
 
                 results = []
-                # Process the nearest neighbors - response is a list and [0] contains the neighbors for our query
+                # Process the nearest neighbors
                 for neighbor in response[0]:
-                    # Skip results above distance threshold
-                    distance = neighbor.distance
-                    if distance > distance_threshold:
+                    # Convert distance from euclidean to dot product similarity
+                    cosine_similarity = 1 - neighbor.distance / (2*sqrt(2))
+                     #Normalize similarity score
+                    normalized_score = (cosine_similarity + 1) / 2
+
+                    # Skip results below similarity threshold
+                    if normalized_score < distance_threshold:
                         continue
 
                     # Get metadata from Firestore using the neighbor.id
@@ -129,7 +139,7 @@ class VectorSearchService:
 
                     results.append(SearchResult(
                         id=neighbor.id,
-                        score=1.0 - distance,  # Convert distance to similarity score
+                        score=normalized_score,  # Score is now in 0-1 range
                         metadata=metadata
                     ))
 
