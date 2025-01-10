@@ -36,12 +36,14 @@ if not logger.handlers:
 
 class LocationService:
     def __init__(self):
+        logger.info('Initializing LocationService')
         api_key = os.environ.get('GOOGLE_MAPS_API_KEY', '')
         if not api_key:
-            logger.error('location_service: GOOGLE_MAPS_API_KEY environment variable is not set')
+            logger.error('GOOGLE_MAPS_API_KEY environment variable is not set')
             raise ValueError("GOOGLE_MAPS_API_KEY environment variable is not set")
+        logger.info('Got Google Maps API key')
         self.gmaps = googlemaps.Client(key=api_key)
-        logger.info('location_service: initialized with Google Maps API client')
+        logger.info('Initialized Google Maps client successfully')
 
     def _get_decimal_coordinates(self, gps_coords: Dict) -> Optional[tuple[float, float]]:
         """Convert GPS coordinates from degrees/minutes/seconds to decimal format"""
@@ -112,35 +114,47 @@ class LocationService:
     def get_location_details(self, location_name: str) -> Optional[Dict]:
         """Get location details from a location name using Google Maps API"""
         try:
+            logger.info(f'Starting location details lookup for: {location_name}')
+            
             if not location_name:
-                logger.warning('location_service: no location name provided')
+                logger.warning('No location name provided')
                 return None
                 
             # Clean up location name - replace underscores with spaces
+            original_name = location_name
             location_name = location_name.replace('_', ' ')
-            logger.info(f'location_service: searching for location: {location_name}')
+            logger.info(f'Cleaned location name from "{original_name}" to "{location_name}"')
             
             # Use places API to search for the location
+            logger.info(f'Calling Google Places API for: {location_name}')
             places_result = self.gmaps.places(location_name)
-            logger.info(f'location_service: places API response: {json.dumps(places_result)}')
+            logger.info(f'Places API raw response: {json.dumps(places_result)}')
             
             if not places_result.get('results'):
-                logger.warning(f'location_service: no results found for location name: {location_name}')
+                logger.warning(f'No results found in Places API response for: {location_name}')
                 return None
             
             # Get the first (most relevant) result
             place = places_result['results'][0]
             location = place['geometry']['location']
-            logger.info(f'location_service: found coordinates - lat: {location["lat"]}, lng: {location["lng"]}')
+            logger.info(f'Found coordinates for {location_name}: lat={location["lat"]}, lng={location["lng"]}')
             
             # Get detailed information using reverse geocoding
-            return self.get_location_details_from_coordinates(
+            logger.info('Calling reverse geocoding with found coordinates')
+            location_details = self.get_location_details_from_coordinates(
                 latitude=location['lat'],
                 longitude=location['lng']
             )
             
+            if location_details:
+                logger.info(f'Successfully got location details for {location_name}')
+            else:
+                logger.warning(f'Failed to get location details for {location_name}')
+            
+            return location_details
+            
         except Exception as e:
-            logger.error(f'location_service: failed to get location details for name: {location_name}, error: {str(e)}')
+            logger.error(f'Error getting location details: {str(e)}', exc_info=True)
             return None
 
     def get_location_details_from_coordinates(self, latitude: float, longitude: float) -> Optional[Dict]:

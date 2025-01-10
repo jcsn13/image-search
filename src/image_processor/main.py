@@ -25,22 +25,33 @@ from typing import Dict, Any
 from location_service import LocationService
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
+# Force all loggers to INFO level
+logging.getLogger('location_service').setLevel(logging.INFO)
+logging.getLogger('google.cloud.storage').setLevel(logging.INFO)
+
 # Initialize clients
+logger.info("Initializing services...")
 storage_client = storage.Client()
 analyzer = GeminiImageAnalyzer()
 embedding_generator = EmbeddingGenerator()
 vector_search = VectorSearchClient()
 location_service = LocationService()
+logger.info("All services initialized successfully")
 
 PROCESSED_BUCKET = os.environ.get('PROCESSED_BUCKET')
+logger.info(f"Using processed bucket: {PROCESSED_BUCKET}")
 
 @functions_framework.cloud_event
 def process_image(cloud_event: Dict[str, Any]) -> tuple[str, int]:
     """Process uploaded images with Gemini and generate embeddings"""
     try:
+        logger.info("Starting image processing function")
         data = cloud_event.data
         bucket_name = data["bucket"]
         file_name = data["name"]
@@ -48,23 +59,30 @@ def process_image(cloud_event: Dict[str, Any]) -> tuple[str, int]:
         logger.info(f"Processing image: {file_name} from bucket: {bucket_name}")
         
         # Download image
+        logger.info("Getting bucket and blob...")
         bucket = storage_client.bucket(bucket_name)
         blob = bucket.blob(file_name)
         logger.info(f"Blob metadata: {blob.metadata}")
+        logger.info(f"Blob: {blob}")
         
         local_path = f"/tmp/{file_name}"
+        logger.info(f"Downloading to {local_path}")
         blob.download_to_filename(local_path)
+        logger.info("File downloaded successfully")
         
         # Get location from metadata
+        logger.info("Extracting location from metadata")
         location_name = blob.metadata.get('location') if blob.metadata else None
         logger.info(f"Extracted location name from metadata: {location_name}")
         
         # Try to get location from file path if metadata is missing
         if not location_name:
+            logger.info("No location in metadata, trying file path")
             # The file_name format is "Location_Name/filename.jpg", so we extract the location
             location_name = file_name.split('/')[0] if '/' in file_name else None
             logger.info(f"Extracted location name from path: {location_name}")
         
+        logger.info(f"Calling location service with name: {location_name}")
         location_info = location_service.get_location_details(location_name) if location_name else None
         logger.info(f"Retrieved location info: {location_info}")
         
