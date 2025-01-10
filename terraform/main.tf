@@ -6,6 +6,10 @@ terraform {
       source  = "hashicorp/google"
       version = ">= 5.10.0"
     }
+    docker = {
+      source = "kreuzwerker/docker"
+      version = "~> 3.0.2"
+    }
   }
 }
 
@@ -14,6 +18,10 @@ provider "google" {
   region                = var.region
   zone                  = "${var.region}-a"
   user_project_override = true
+}
+
+provider "docker" {
+  host = "unix:///var/run/docker.sock"
 }
 
 # Enable APIs
@@ -213,9 +221,62 @@ module "functions" {
   ]
 }
 
-# module "api_service" {
-#   source = "./modules/api_service"
-#   project_id = var.project_id
-#   region     = var.region
-# #   vector_search_index_id = module.vector_search.index_id
-# }
+
+# Artifact Registry Repository
+resource "google_artifact_registry_repository" "api_repo" {
+  repository_id = "streamlit-app-repo"
+  project = var.project_id
+  location      = var.region
+  format        = "DOCKER"
+
+  depends_on = [ 
+    module.functions
+  ]
+}
+
+# Build and Push Front-End Image
+resource "docker_image" "api_image" {
+  name = "${google_artifact_registry_repository.api_repo.location}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.api_repo.repository_id}/front-end-app:${random_uuid.tag.result}"  
+  build {
+    context = "${path.root}/../src/search_api"
+  }
+
+  depends_on = [ 
+    google_artifact_registry_repository.api_repo
+  ]
+}
+
+resource "random_uuid" "tag" {
+  keepers = {
+    timestamp = timestamp()
+  }
+} 
+
+resource "null_resource" "push_api_image" {
+  triggers = {
+    image_id = docker_image.api_image.id
+  }
+
+  provisioner "local-exec" {
+    command = "gcloud auth configure-docker ${google_artifact_registry_repository.api_repo.location} && docker push ${docker_image.api_image.name}"
+  }
+
+  depends_on = [
+    docker_image.api_image
+  ]
+}
+
+module "api_service" {
+  source = "./modules/api_service"
+  project_id      = var.project_id
+  region          = var.region
+  service_account = module.iam.service_account_email
+  image_name = docker_image.api_image.name
+  vector_search_index_id = module.vector_search.index_id
+  deployed_index_id = module.vector_search.deployed_index_id
+
+  depends_on = [ 
+    module.functions,
+    null_resource.push_api_image
+  ]
+}

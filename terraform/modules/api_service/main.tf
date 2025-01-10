@@ -6,16 +6,16 @@ resource "google_storage_bucket" "temp_images" {
 }
 
 # Cloud Run Service with VPC Access and Environment Variables
-resource "google_cloud_run_v2_service" "image_app" {
-  name        = "image-search-app"
+resource "google_cloud_run_v2_service" "search_api_app" {
+  name        = "image-search-api"
   location    = var.region
   description = "Streamlit app to"
 
   template {
-    # service_account = "${var.project_number}-compute@developer.gserviceaccount.com"
+    service_account = var.service_account
 
     containers {
-      image = "name_example"
+      image = var.image_name
 
       resources {
         limits = {
@@ -33,6 +33,18 @@ resource "google_cloud_run_v2_service" "image_app" {
         name  = "PROJECT_ID"
         value = var.project_id
       }
+      env {
+        name  = "REGION"
+        value = var.region
+      }
+      env {
+        name  = "VECTOR_SEARCH_INDEX"
+        value = var.vector_search_index_id
+      }
+      env {
+        name  = "DEPLOYED_INDEX_ID"
+        value = var.deployed_index_id
+      }
     }
   }
 
@@ -46,14 +58,14 @@ resource "google_cloud_run_v2_service" "image_app" {
 resource "google_storage_bucket_iam_member" "run_service_account_object_admin" {
   bucket = google_storage_bucket.temp_images.name
   role   = "roles/storage.objectAdmin"
-  member = "serviceAccount:${google_cloud_run_v2_service.image_app.template[0].service_account}"
+  member = "serviceAccount:${google_cloud_run_v2_service.search_api_app.template[0].service_account}"
 }
 
 # IAM Policy for All Organization Users
 resource "google_cloud_run_service_iam_policy" "all_users" {
   project     = var.project_id
   location    = var.region
-  service     = google_cloud_run_v2_service.image_app.name
+  service     = google_cloud_run_v2_service.search_api_app.name
 
   policy_data = jsonencode({
     bindings = [
