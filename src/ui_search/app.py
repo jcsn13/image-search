@@ -3,6 +3,7 @@ import requests
 from typing import List, Dict
 import os
 from dotenv import load_dotenv
+from io import BytesIO
 
 # Load environment variables
 load_dotenv()
@@ -372,11 +373,20 @@ def main():
                                         blob_name = '/'.join(image_url.split('/')[3:])
                                         image_url = f"https://storage.googleapis.com/{bucket_name}/{blob_name}"
                                     
-                                    # Image card with hover effect
-                                    st.image(
-                                        image_url,
-                                        use_column_width=True
-                                    )
+                                    try:
+                                        # Load image from URL
+                                        response = requests.get(image_url)
+                                        if response.status_code == 200:
+                                            image_bytes = BytesIO(response.content)
+                                            # Image card with hover effect
+                                            st.image(
+                                                image_bytes,
+                                                use_column_width=True
+                                            )
+                                        else:
+                                            st.error(f"Failed to load image: {response.status_code}")
+                                    except Exception as e:
+                                        st.error(f"Error loading image: {str(e)}")
                                     
                                     # Similarity score
                                     similarity = result.get('similarity_score', 0)
