@@ -16,6 +16,7 @@ limitations under the License.
 
 from google.cloud import aiplatform
 from google.cloud import storage
+from google.cloud import firestore
 import vertexai
 from vertexai.vision_models import MultiModalEmbeddingModel
 import numpy as np
@@ -60,6 +61,9 @@ class VectorSearchService:
         self.storage_client = storage.Client()
         self.bucket = self.storage_client.bucket(self.bucket_name)
 
+        # Initialize Firestore client
+        self.db = firestore.Client()
+
     def generate_text_embedding(self, text: str) -> np.ndarray:
         """Generate embedding for text query using multimodal model"""
         embeddings = self.embedding_model.get_embeddings(
@@ -71,6 +75,20 @@ class VectorSearchService:
         # Get text embedding from model response
         embedding_array = np.array(embeddings.text_embedding)
         return embedding_array / np.linalg.norm(embedding_array)
+
+    async def _get_metadata_from_firestore(self, doc_id: str) -> dict:
+        """Get metadata from Firestore for a given document ID"""
+        try:
+            doc_ref = self.db.collection('index_metadata').document(doc_id)
+            doc = doc_ref.get()
+            if doc.exists:
+                return doc.to_dict()
+            else:
+                logger.warning(f"No metadata found in Firestore for document ID: {doc_id}")
+                return {}
+        except Exception as e:
+            logger.error(f"Error fetching metadata from Firestore for {doc_id}: {e}")
+            return {}
 
     def search_similar(
             self,
@@ -99,12 +117,14 @@ class VectorSearchService:
                     if distance > distance_threshold:
                         continue
 
-                    # Get metadata from GCS
-                    try:
-                        blob = self.bucket.blob(f"embeddings/{neighbor.id}.json")
-                        metadata = json.loads(blob.download_as_string())['metadata']
-                    except Exception as e:
-                        logger.error(f"Error fetching metadata for {neighbor.id}: {e}")
+                    # Get metadata from Firestore using the neighbor.id
+                    doc_ref = self.db.collection('index_metadata').document(neighbor.id)
+                    doc = doc_ref.get()
+                    
+                    if doc.exists:
+                        metadata = doc.to_dict()
+                    else:
+                        logger.warning(f"No metadata found in Firestore for document ID: {neighbor.id}")
                         metadata = {}
 
                     results.append(SearchResult(
@@ -116,5 +136,5 @@ class VectorSearchService:
                 return results
 
             except Exception as e:
-                logger.error(f"Error searching similar vectors: {e}", exc_info=True)  # Added exc_info for better debugging
+                logger.error(f"Error searching similar vectors: {e}", exc_info=True)
                 raise

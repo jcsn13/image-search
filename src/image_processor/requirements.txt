@@ -5,3 +5,4 @@ Pillow>=9.0.0
 numpy>=1.21.0
 functions-framework>=3.0.0
 googlemaps
+google-cloud-firestore

@@ -5,3 +5,4 @@ numpy
 gunicorn
 vertexai
 functions-framework
+google-cloud-firestore

@@ -29,6 +29,7 @@ resource "google_project_iam_member" "grant_sa_function_roles" {
     "roles/cloudbuild.serviceAgent",
     "roles/pubsub.publisher",
     "roles/secretmanager.secretAccessor",
+    "roles/datastore.user",
     
     # Added Vector Search specific roles
     "roles/aiplatform.user",

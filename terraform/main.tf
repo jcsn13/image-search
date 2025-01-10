@@ -79,7 +79,8 @@ resource "google_project_service" "required_apis" {
     "places-backend.googleapis.com",
     "geocoding-backend.googleapis.com",
     "secretmanager.googleapis.com",
-    "apikeys.googleapis.com"
+    "apikeys.googleapis.com",
+    "firestore.googleapis.com"
   ])
 
   project                    = var.project_id

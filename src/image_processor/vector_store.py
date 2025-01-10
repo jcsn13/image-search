@@ -16,6 +16,7 @@
 
 from google.cloud import aiplatform
 from google.cloud import storage
+from google.cloud import firestore
 import numpy as np
 from typing import Dict, Any
 import os
@@ -50,6 +51,9 @@ class VectorSearchClient:
         self.storage_client = storage.Client()
         self.bucket = self.storage_client.bucket(self.bucket_name)
         
+        # Initialize Firestore client
+        self.db = firestore.Client()
+        
         # Get the index name parts from the full resource name
         self.endpoint = aiplatform.MatchingEngineIndex(
             index_name=self.index_id
@@ -74,6 +78,27 @@ class VectorSearchClient:
         )
         return f"gs://{self.bucket_name}/{blob_name}"
     
+    def _store_metadata_in_firestore(self, id: str, metadata: Dict[str, Any]) -> None:
+        """
+        Store metadata in Firestore
+        
+        Args:
+            id: Unique identifier for the embedding
+            metadata: Metadata to store
+        """
+        try:
+            # Add timestamp to metadata
+            metadata['created_at'] = firestore.SERVER_TIMESTAMP
+            
+            # Store in Firestore
+            doc_ref = self.db.collection('index_metadata').document(id)
+            doc_ref.set(metadata)
+            logger.info(f"Stored metadata in Firestore for id: {id}")
+            
+        except Exception as e:
+            logger.error(f"Error storing metadata in Firestore: {e}")
+            raise
+    
     def upsert_embedding(
         self,
         embedding: np.ndarray,
@@ -81,7 +106,7 @@ class VectorSearchClient:
         metadata: Dict[str, Any]
     ) -> None:
         """
-        Upload embedding to Vector Search using streaming update
+        Upload embedding to Vector Search using streaming update and store metadata in Firestore
         
         Args:
             embedding: Normalized embedding vector
@@ -105,18 +130,14 @@ class VectorSearchClient:
             gcs_uri = self._upload_to_gcs(storage_data, blob_name)
             logger.info(f"Backed up embedding data to {gcs_uri}")
             
-            # Prepare datapoint for streaming update
+            # Store metadata in Firestore
+            self._store_metadata_in_firestore(id, metadata)
+            
+            # Prepare datapoint for streaming update (vector only)
             datapoint = {
                 "datapoint_id": id,
                 "feature_vector": embedding,
             }
-            
-            # # Add metadata as feature fields
-            # restricted_keys = ['file_name', 'original_bucket', 'processed_image_path', 
-            #                  'context', 'characteristics', 'objects']
-            # for key in restricted_keys:
-            #     if key in metadata:
-            #         datapoint[f"metadata_{key}"] = str(metadata[key])
             
             # Stream update to the index
             response = self.endpoint.upsert_datapoints(
