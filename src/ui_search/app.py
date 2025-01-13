@@ -332,15 +332,27 @@ def init_session_state():
         st.session_state.total_results = 0
     if 'query' not in st.session_state:
         st.session_state.query = ""
-    if 'results' not in st.session_state:
-        st.session_state.results = []
+    if 'current_results' not in st.session_state:
+        st.session_state.current_results = []
     if 'max_results' not in st.session_state:
         st.session_state.max_results = 20
 
 def reset_search_state():
     """Reset search-related state when performing a new search"""
     st.session_state.search_performed = True
-    st.session_state.filtered_results = []
+    st.session_state.current_results = []
+    st.session_state.total_results = 0
+
+def min_max_scale(scores):
+    """
+    Normalize scores using min-max scaling.
+    Returns a value between 0 and 1.
+    """
+    min_score = min(scores)
+    max_score = max(scores)
+    if max_score == min_score:
+        return [1.0] * len(scores)  # If all scores are equal, return 1.0
+    return [(x - min_score) / (max_score - min_score) for x in scores]
 
 def main():
     # Initialize session state
@@ -390,7 +402,7 @@ def main():
     
     # Handle search
     if search_button and query:
-        # Reset search state if it's a new query
+        # Reset search state for new queries
         if query != st.session_state.query:
             reset_search_state()
             st.session_state.query = query
@@ -410,11 +422,11 @@ def main():
                     results = response.json().get('results', [])
                     
                     if results:
-                        # Store results if it's a new search
-                        if not st.session_state.results:
-                            st.session_state.results = results
+                        # Update current results directly
+                        st.session_state.current_results = results
+                        st.session_state.total_results = len(results)
                         
-                        display_results = st.session_state.results
+                        display_results = st.session_state.current_results
                         
                         # Sort results
                         if sort_by == "Similarity":
@@ -442,9 +454,13 @@ def main():
                             unsafe_allow_html=True
                         )
                         
+                        # Calculate normalized scores for all results
+                        similarity_scores = [result.get('similarity_score', 0) for result in display_results]
+                        normalized_scores = min_max_scale(similarity_scores)
+                        
                         # Create grid layout with 5 columns for better alignment
                         cols = st.columns(5)
-                        for idx, result in enumerate(display_results):
+                        for idx, (result, normalized_score) in enumerate(zip(display_results, normalized_scores)):
                             with cols[idx % 5]:
                                 with st.container():
                                     # Get image URL from processed_image_path
@@ -470,10 +486,10 @@ def main():
                                     except Exception as e:
                                         st.error(f"Error loading image: {str(e)}")
                                     
-                                    # Similarity score
-                                    similarity = result.get('similarity_score', 0)
-                                    clamped_similarity = clamp(similarity)
-                                    st.progress(clamped_similarity, text=f"Similarity: {similarity:.0%}")
+                                    # Display both raw and normalized similarity scores
+                                    raw_similarity = result.get('similarity_score', 0)
+                                    st.progress(normalized_score, 
+                                              text=f"Similarity: {raw_similarity:.3f} (Normalized: {normalized_score:.0%})")
                                     
                                     # Metadata expansion
                                     with st.expander("Details"):
@@ -484,15 +500,24 @@ def main():
                                             st.markdown(f'<p class="metadata-text">{metadata.get("context", "N/A")}</p>', unsafe_allow_html=True)
                                             
                                             st.markdown('<p class="metadata-text"><strong>Characteristics</strong></p>', unsafe_allow_html=True)
-                                            characteristics = metadata.get('characteristics', '').split(',')
+                                            characteristics = metadata.get('characteristics', [])
+                                            if isinstance(characteristics, str):  # Handle legacy format
+                                                characteristics = characteristics.split(',')
                                             tags_html = " ".join([
                                                 f'<span class="tag">{tag.strip()}</span>' 
-                                                for tag in characteristics if tag.strip()
+                                                for tag in characteristics if tag and isinstance(tag, str)
                                             ])
                                             st.markdown(tags_html, unsafe_allow_html=True)
                                             
                                             st.markdown('<p class="metadata-text"><strong>Objects</strong></p>', unsafe_allow_html=True)
-                                            st.markdown(f'<p class="metadata-text">{metadata.get("objects", "N/A")}</p>', unsafe_allow_html=True)
+                                            objects = metadata.get('objects', [])
+                                            if isinstance(objects, str):  # Handle legacy format
+                                                objects = objects.split(',')
+                                            objects_html = " ".join([
+                                                f'<span class="tag">{obj.strip()}</span>'
+                                                for obj in objects if obj and isinstance(obj, str)
+                                            ])
+                                            st.markdown(objects_html, unsafe_allow_html=True)
                                             
                                             st.markdown('<p class="metadata-text"><strong>Properties</strong></p>', unsafe_allow_html=True)
                                             col1, col2 = st.columns(2)
