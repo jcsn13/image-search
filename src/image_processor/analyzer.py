@@ -64,7 +64,7 @@ class GeminiImageAnalyzer:
             img_byte_arr = img_byte_arr.getvalue()
 
         generation_config = {
-            "max_output_tokens": 150,
+            "max_output_tokens": 80,
             "temperature": 0.2 
         }
         

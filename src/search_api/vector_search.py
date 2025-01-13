@@ -116,15 +116,12 @@ class VectorSearchService:
                 )
 
                 results = []
-                # Process the nearest neighbors
-                for neighbor in response[0]:
-                    # Convert distance from euclidean to dot product similarity
-                    cosine_similarity = 1 - neighbor.distance / (2*sqrt(2))
-                     #Normalize similarity score
-                    normalized_score = (cosine_similarity + 1) / 2
 
-                    # Skip results below similarity threshold
-                    if normalized_score < distance_threshold:
+                for neighbor in response[0]:
+                     
+                    distance_score = neighbor.distance
+
+                    if distance_score >distance_threshold:
                         continue
 
                     # Get metadata from Firestore using the neighbor.id
@@ -139,7 +136,7 @@ class VectorSearchService:
 
                     results.append(SearchResult(
                         id=neighbor.id,
-                        score=normalized_score,  # Score is now in 0-1 range
+                        score=distance_score,
                         metadata=metadata
                     ))
 
