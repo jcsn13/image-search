@@ -175,7 +175,7 @@ def process_image(cloud_event: Dict[str, Any]) -> tuple[str, int]:
             logger.warning("No location name found in metadata or path")
         
         # Analyze with Gemini
-        analysis = analyzer.analyze_image(local_path)
+        analysis = analyzer.analyze_image(local_path, location_info)
         logger.info(f"Generated analysis for {file_name}")
         
         # Generate embedding
@@ -193,9 +193,9 @@ def process_image(cloud_event: Dict[str, Any]) -> tuple[str, int]:
             'size': blob.size,
             'context': analysis.context_description,
             'characteristics': analysis.visual_characteristics,
-            'objects': ','.join(analysis.object_annotations),
+            'objects': analysis.object_annotations,
             'processed_image_path': f"gs://{PROCESSED_BUCKET}/{file_name}",
-            'location': location_info if location_info else None
+            'location': location_info
         }
         
         vector_search.upsert_embedding(
