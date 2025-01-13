@@ -38,7 +38,7 @@ def search_by_text():
             return jsonify({'error': 'No text query provided'}), 400
 
         query_text = data['query']
-        num_results = data.get('num_results', 10)
+        num_results = data.get('num_results', 50)
         threshold = data.get('threshold', 0.5)
 
         # Generate embedding from text using multimodal model

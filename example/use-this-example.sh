@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Set the project ID
-PROJECT_ID="projectid"
+PROJECT_ID="image-search-447401"
 
 # Set the region
 REGION="us-central1"
