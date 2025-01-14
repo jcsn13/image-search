@@ -22,6 +22,7 @@ from typing import Dict, Any, Tuple
 import os
 import json
 import logging
+import uuid
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -60,18 +61,27 @@ class VectorSearchClient:
         )
         logger.info(f"Initialized endpoint with index: {self.endpoint.resource_name}")
     
-    def _extract_file_info(self, full_path: str) -> Tuple[str, str]:
+    def _generate_id(self) -> str:
+        """
+        Generate a unique ID that's safe for both Firestore and Vector Search.
+        
+        Returns:
+            A string containing a UUID4 without hyphens
+        """
+        return uuid.uuid4().hex
+    
+    def _extract_file_info(self, file_path: str) -> Tuple[str, str]:
         """
         Extract filename and directory path from full path.
         
         Args:
-            full_path: Complete file path including directories
+            file_path: Complete file path including directories
             
         Returns:
             Tuple of (filename, full_path)
         """
-        filename = os.path.basename(full_path)
-        return filename, full_path
+        filename = os.path.basename(file_path)
+        return filename, file_path
     
     def _upload_to_gcs(self, data: Dict[str, Any], blob_name: str) -> str:
         """
@@ -96,14 +106,14 @@ class VectorSearchClient:
         Store metadata in Firestore
         
         Args:
-            id: Unique identifier for the embedding (filename)
+            id: Generated unique identifier for the embedding
             metadata: Metadata to store
         """
         try:
             # Add timestamp to metadata
             metadata['created_at'] = firestore.SERVER_TIMESTAMP
             
-            # Store in Firestore using the filename as ID
+            # Store in Firestore using the generated ID
             doc_ref = self.db.collection('index_metadata').document(id)
             doc_ref.set(metadata)
             logger.info(f"Stored metadata in Firestore for id: {id}")
@@ -115,45 +125,55 @@ class VectorSearchClient:
     def upsert_embedding(
         self,
         embedding: np.ndarray,
-        id: str,
+        file_path: str,
         metadata: Dict[str, Any]
-    ) -> None:
+    ) -> str:
         """
         Upload embedding to Vector Search using streaming update and store metadata in Firestore
         
         Args:
             embedding: Normalized embedding vector
-            id: Full path of the file
+            file_path: Full path of the file
             metadata: Additional metadata to store
+            
+        Returns:
+            The generated ID used for the embedding
         """
         try:
+            # Generate a unique ID
+            generated_id = self._generate_id()
+            
             # Convert embedding to list if it's numpy array
             if isinstance(embedding, np.ndarray):
                 embedding = embedding.tolist()
             
             # Extract filename and keep full path in metadata
-            filename, full_path = self._extract_file_info(id)
-            metadata['full_path'] = full_path
+            filename, full_path = self._extract_file_info(file_path)
+            metadata.update({
+                'file_name': filename,
+                'full_path': full_path
+            })
             
             # Prepare data for backup storage
             storage_data = {
-                "id": filename,
+                "id": generated_id,
+                "file_name": filename,
                 "full_path": full_path,
                 "embedding": embedding,
                 "metadata": metadata
             }
             
             # Upload to GCS for backup
-            blob_name = f"embeddings/{filename}.json"
+            blob_name = f"embeddings/{generated_id}.json"
             gcs_uri = self._upload_to_gcs(storage_data, blob_name)
             logger.info(f"Backed up embedding data to {gcs_uri}")
             
             # Store metadata in Firestore
-            self._store_metadata_in_firestore(filename, metadata)
+            self._store_metadata_in_firestore(generated_id, metadata)
             
-            # Prepare datapoint for streaming update (vector only)
+            # Prepare datapoint for streaming update
             datapoint = {
-                "datapoint_id": filename,
+                "datapoint_id": generated_id,
                 "feature_vector": embedding,
             }
             
@@ -161,7 +181,9 @@ class VectorSearchClient:
             response = self.endpoint.upsert_datapoints(
                 datapoints=[datapoint]
             )
-            logger.info(f"Successfully streamed embedding with id: {filename}")
+            logger.info(f"Successfully streamed embedding with id: {generated_id}")
+            
+            return generated_id
             
         except Exception as e:
             logger.error(f"Error upserting embedding: {e}")

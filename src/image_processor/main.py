@@ -200,7 +200,7 @@ def process_image(cloud_event: Dict[str, Any]) -> tuple[str, int]:
         
         vector_search.upsert_embedding(
             embedding=embedding,
-            id=file_name,
+            file_path=file_name,
             metadata=metadata
         )
         logger.info(f"Stored embedding in Vector Search for {file_name}")
