@@ -223,7 +223,6 @@ module "functions" {
 }
 
 
-# Artifact Registry Repository
 resource "google_artifact_registry_repository" "api_repo" {
   repository_id = "streamlit-app-repo"
   project = var.project_id
@@ -235,9 +234,8 @@ resource "google_artifact_registry_repository" "api_repo" {
   ]
 }
 
-# Build and Push Front-End Image
 resource "docker_image" "api_image" {
-  name = "${google_artifact_registry_repository.api_repo.location}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.api_repo.repository_id}/front-end-app:${random_uuid.tag.result}"  
+  name = "${google_artifact_registry_repository.api_repo.location}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.api_repo.repository_id}/api-app:${random_uuid.tag.result}"  
   build {
     context = "${path.root}/../src/search_api"
   }
@@ -279,5 +277,55 @@ module "api_service" {
   depends_on = [ 
     module.functions,
     null_resource.push_api_image
+  ]
+}
+
+resource "google_artifact_registry_repository" "ui_repo" {
+  repository_id = "streamlit-ui-repo"
+  project = var.project_id
+  location      = var.region
+  format        = "DOCKER"
+
+  depends_on = [ 
+    module.api_service
+  ]
+}
+
+resource "docker_image" "ui_image" {
+  name = "${google_artifact_registry_repository.ui_repo.location}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.ui_repo.repository_id}/front-end-app:${random_uuid.tag.result}"  
+  build {
+    context = "${path.root}/../src/ui_search"
+  }
+
+  depends_on = [ 
+    google_artifact_registry_repository.ui_repo
+  ]
+}
+
+resource "null_resource" "push_ui_image" {
+  triggers = {
+    image_id = docker_image.ui_image.id
+  }
+
+  provisioner "local-exec" {
+    command = "gcloud auth configure-docker ${google_artifact_registry_repository.ui_repo.location} && docker push ${docker_image.ui_image.name}"
+  }
+
+  depends_on = [
+    docker_image.ui_image
+  ]
+}
+
+module "ui" {
+  source = "./modules/ui"
+  project_id = var.project_id
+  region = var.region
+  service_account = module.iam.service_account_email
+  image_name = docker_image.ui_image.name
+  api_endpoint = module.api_service.api_endpoint
+
+  depends_on = [ 
+    module.api_service,
+    null_resource.push_ui_image
   ]
 }
