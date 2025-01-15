@@ -41,3 +41,64 @@ resource "google_project_iam_member" "grant_sa_function_roles" {
   project = var.project_id
   member  = "serviceAccount:${google_service_account.vertex_sa.email}"
 }
+
+resource "google_project_service_identity" "service_agents" {
+  provider = google-beta
+  for_each = toset([
+    "storage.googleapis.com",
+    "cloudbuild.googleapis.com",
+    "eventarc.googleapis.com",
+    "compute.googleapis.com"
+  ])
+  
+  project = var.project_id
+  service = each.value
+}
+
+resource "google_project_iam_member" "cloudbuild_sa_permissions" {
+  for_each = toset([
+    "roles/cloudbuild.builds.builder",
+    "roles/cloudbuild.serviceAgent",
+    "roles/iam.serviceAccountUser",
+    "roles/cloudfunctions.developer",
+    "roles/run.developer"
+  ])
+  
+  project = var.project_id
+  role    = each.key
+  member  = "serviceAccount:${var.project_number}-compute@developer.gserviceaccount.com"
+  
+  depends_on = [
+    google_project_service_identity.service_agents
+  ]
+}
+
+resource "google_project_iam_member" "compute_eventarc_receiver" {
+  project = var.project_id
+  role    = "roles/eventarc.eventReceiver"
+  member  = "serviceAccount:${var.project_number}-compute@developer.gserviceaccount.com"
+  
+  depends_on = [
+    google_project_service_identity.service_agents
+  ]
+}
+
+resource "google_project_iam_member" "storage_pubsub_publisher" {
+  project = var.project_id
+  role    = "roles/pubsub.publisher"
+  member  = "serviceAccount:service-${var.project_number}@gs-project-accounts.iam.gserviceaccount.com"
+
+  depends_on = [ 
+    google_project_service_identity.service_agents
+  ]
+}
+
+resource "google_project_iam_member" "eventarc_agent" {
+  project = var.project_id
+  role    = "roles/eventarc.serviceAgent"
+  member  = "serviceAccount:service-${var.project_number}@gcp-sa-eventarc.iam.gserviceaccount.com"
+  
+  depends_on = [
+    google_project_service_identity.service_agents
+  ]
+}
