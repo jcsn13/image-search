@@ -4,6 +4,10 @@ from typing import List, Dict
 import os
 from dotenv import load_dotenv
 from io import BytesIO
+import asyncio
+import aiohttp
+from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
 
 # Load environment variables
 load_dotenv()
@@ -415,7 +419,12 @@ def main():
                 st.subheader("Response Details")
                 st.write("Response Status:", response.status_code)
                 st.write("Response Headers:", dict(response.headers))
-                st.json(response.json())
+                try:
+                    st.json(response.json())
+                except requests.exceptions.JSONDecodeError:
+                    st.error("Could not decode JSON response")
+                    st.text("Raw Response:")
+                    st.text(response.text)
             
             with results_tab:
                 if response.ok:
@@ -463,6 +472,9 @@ def main():
                         for idx, (result, normalized_score) in enumerate(zip(display_results, normalized_scores)):
                             with cols[idx % 5]:
                                 with st.container():
+                                    placeholder = st.empty()
+                                    with placeholder:
+                                        st.spinner("Loading image...")  # Shows while image loads
                                     # Get image URL from processed_image_path
                                     image_url = result.get('metadata', {}).get('processed_image_path', '')
                                     if image_url.startswith('gs://'):
@@ -479,7 +491,7 @@ def main():
                                             # Image card with hover effect
                                             st.image(
                                                 image_bytes,
-                                                use_column_width=True
+                                                use_container_width=True
                                             )
                                         else:
                                             st.error(f"Failed to load image: {response.status_code}")
