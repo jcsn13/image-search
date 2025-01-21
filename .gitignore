@@ -56,3 +56,5 @@ crash.*.log
 tmp/
 **/tmp/
 temp/
+
+key.json

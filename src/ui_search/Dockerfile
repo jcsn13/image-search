@@ -15,8 +15,13 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the application code
-COPY app.py .
-COPY mock_data.py .
+COPY . .
+
+# Create directory for service account key
+RUN mkdir -p /app/secrets
+
+# The key.json will be mounted at runtime to /app/secrets/key.json
+ENV GOOGLE_APPLICATION_CREDENTIALS=/app/secrets/key.json
 
 # Expose the port Streamlit runs on
 EXPOSE 8501
@@ -30,4 +35,4 @@ ENV PYTHONUNBUFFERED=1 \
 HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health || exit 1
 
 # Run the application
-ENTRYPOINT ["streamlit", "run", "app.py", "--server.address=0.0.0.0"] 
+ENTRYPOINT ["streamlit", "run", "app.py", "--server.address=0.0.0.0"]

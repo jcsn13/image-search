@@ -8,6 +8,12 @@ import asyncio
 import aiohttp
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
+from google.cloud import storage
+from datetime import timedelta
+import google.auth
+from google.auth import compute_engine, impersonated_credentials
+from google.oauth2 import service_account
+from google.oauth2.credentials import Credentials as OAuth2Credentials
 
 # Load environment variables
 load_dotenv()
@@ -176,6 +182,104 @@ st.markdown("""
 API_ENDPOINT = os.getenv('API_ENDPOINT')
 if not API_ENDPOINT:
     raise ValueError("API_ENDPOINT environment variable is not set")
+
+# Initialize storage client at app startup
+storage_client = storage.Client()
+
+def get_signed_url(bucket_name: str, blob_name: str, expiration: int = 3600) -> str:
+    """Generate signed URL for accessing private bucket objects"""
+    try:
+        credentials, project = google.auth.default()
+        storage_client = storage.Client(credentials=credentials)
+        
+        # If using OAuth credentials (local development with gcloud auth)
+        if isinstance(credentials, OAuth2Credentials):
+            url = f"https://storage.googleapis.com/{bucket_name}/{blob_name}"
+            if credentials.token:
+                url = f"{url}?access_token={credentials.token}"
+            return url
+            
+        # If using Compute Engine credentials (Cloud Run)
+        elif isinstance(credentials, compute_engine.Credentials):
+            try:
+                # First try to generate a signed URL
+                bucket = storage_client.bucket(bucket_name)
+                blob = bucket.blob(blob_name)
+                return blob.generate_signed_url(
+                    version="v4",
+                    expiration=timedelta(seconds=expiration),
+                    method="GET"
+                )
+            except Exception as e:
+                st.write(f"Falling back to token auth: {str(e)}")
+                # Fall back to token auth if signing fails
+                credentials = compute_engine.IDTokenCredentials(
+                    credentials, "https://storage.googleapis.com"
+                )
+                url = f"https://storage.googleapis.com/{bucket_name}/{blob_name}"
+                if credentials.token:
+                    url = f"{url}?access_token={credentials.token}"
+                return url
+            
+        # If using service account credentials
+        elif isinstance(credentials, service_account.Credentials):
+            bucket = storage_client.bucket(bucket_name)
+            blob = bucket.blob(blob_name)
+            try:
+                return blob.generate_signed_url(
+                    version="v4",
+                    expiration=timedelta(seconds=expiration),
+                    method="GET"
+                )
+            except Exception as e:
+                st.write(f"Signed URL generation failed, using direct access: {str(e)}")
+                return f"https://storage.googleapis.com/{bucket_name}/{blob_name}"
+                
+        # If using impersonated credentials
+        elif isinstance(credentials, impersonated_credentials.Credentials):
+            try:
+                # Create a source credentials object that can sign
+                source_credentials = service_account.Credentials.from_service_account_file(
+                    'key.json',  # Your service account key file
+                    scopes=['https://www.googleapis.com/auth/cloud-platform']
+                )
+                
+                # Create the storage client with the source credentials
+                storage_client = storage.Client(credentials=source_credentials)
+                bucket = storage_client.bucket(bucket_name)
+                blob = bucket.blob(blob_name)
+                
+                # Generate signed URL with the source credentials
+                return blob.generate_signed_url(
+                    version="v4",
+                    expiration=timedelta(seconds=expiration),
+                    method="GET",
+                    service_account_email=source_credentials.service_account_email
+                )
+            except Exception as e:
+                st.error(f"Signed URL generation failed with impersonated credentials: {str(e)}")
+                try:
+                    # Try to use the credentials token directly
+                    headers = {}
+                    auth_req = google.auth.transport.requests.Request()
+                    credentials.refresh(auth_req)
+                    credentials.apply(headers)
+                    
+                    if 'authorization' in headers:
+                        token = headers['authorization'].split(' ')[1]
+                        url = f"https://storage.googleapis.com/{bucket_name}/{blob_name}?access_token={token}"
+                        return url
+                except Exception as token_error:
+                    st.error(f"Token-based access also failed: {str(token_error)}")
+                    return f"https://storage.googleapis.com/{bucket_name}/{blob_name}"
+            
+        else:
+            st.error(f"Unsupported credentials type: {type(credentials)}")
+            return f"https://storage.googleapis.com/{bucket_name}/{blob_name}"
+            
+    except Exception as e:
+        st.error(f"Error generating URL: {str(e)}")
+        return f"https://storage.googleapis.com/{bucket_name}/{blob_name}"
 
 def search_images(query: str, use_mock: bool = False):
     """
@@ -478,10 +582,15 @@ def main():
                                     # Get image URL from processed_image_path
                                     image_url = result.get('metadata', {}).get('processed_image_path', '')
                                     if image_url.startswith('gs://'):
-                                        # Convert GCS path to public URL if needed
+                                        # Parse bucket and blob name from GCS path
                                         bucket_name = image_url.split('/')[2]
                                         blob_name = '/'.join(image_url.split('/')[3:])
-                                        image_url = f"https://storage.googleapis.com/{bucket_name}/{blob_name}"
+                                        try:
+                                            # Generate signed URL for private bucket access
+                                            image_url = get_signed_url(bucket_name, blob_name)
+                                        except Exception as e:
+                                            st.error(f"Error generating signed URL: {str(e)}")
+                                            continue
                                     
                                     try:
                                         # Load image from URL
