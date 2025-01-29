@@ -111,3 +111,13 @@ resource "google_project_organization_policy" "automatic_iam_grants" {
     enforced = false
   }
 }
+
+# Allow service account key creation
+resource "google_project_organization_policy" "allow_service_account_key_creation" {
+  project    = var.project_id
+  constraint = "constraints/iam.disableServiceAccountKeyCreation"
+
+  boolean_policy {
+    enforced = false
+  }
+}
