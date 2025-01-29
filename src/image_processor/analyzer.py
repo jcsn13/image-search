@@ -23,6 +23,8 @@ from PIL import Image
 import io
 import base64
 import json
+from tenacity import retry, stop_after_attempt, wait_exponential
+import logging
 
 @dataclass
 class ImageAnalysis:
@@ -50,7 +52,18 @@ class ImageAnalysis:
 class GeminiImageAnalyzer:
     def __init__(self):
         """Initialize Gemini model"""
-        self.model = GenerativeModel('gemini-1.5-pro')
+        self.logger = logging.getLogger(__name__)
+        
+        # List of regions to try
+        self.regions = [
+            "us-central1",
+            "europe-west2",
+            "europe-west3",
+            "asia-northeast1",
+            "australia-southeast1",
+            "asia-south1"
+        ]
+        self._initialize_model()
         
         # Base configuration for all generations
         self.base_config = {
@@ -101,6 +114,32 @@ class GeminiImageAnalyzer:
             }
         }
     
+    def _initialize_model(self, region: str = "us-central1") -> None:
+        """Initialize model with specific region"""
+        vertexai.init(project=os.getenv("GCP_PROJECT"), location=region)
+        self.model = GenerativeModel('gemini-1.5-pro')
+    
+    @retry(
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        stop=stop_after_attempt(3),
+        reraise=True
+    )
+    def _generate_with_fallback(self, prompt, config):
+        """Generate content with region fallback"""
+        last_error = None
+        
+        for region in self.regions:
+            try:
+                self._initialize_model(region)
+                response = self.model.generate_content(prompt, generation_config=config)
+                return self._parse_json_response(response.text)
+            except Exception as e:
+                self.logger.warning(f"Error in region {region}: {str(e)}")
+                last_error = e
+                continue
+                
+        raise Exception(f"All regions failed. Last error: {str(last_error)}")
+    
     def _encode_image(self, image_path: str) -> str:
         """
         Convert image to base64 string
@@ -140,46 +179,33 @@ class GeminiImageAnalyzer:
     
     def analyze_image(self, image_path: str, location_info: str = None) -> ImageAnalysis:
         """
-        Analyze image using Gemini Pro
-        
-        Args:
-            image_path: Path to image file
-            location_info: Optional location information to analyze
-            
-        Returns:
-            ImageAnalysis object containing analysis results
+        Analyze image using Gemini Pro with retries and region fallback
         """
         # Convert image to base64
         image_base64 = self._encode_image(image_path)
         
         # Generate context description
-        context_response = self.model.generate_content([
+        context_prompt = [
             "Analise a imagem fornecida em base64 e forneça uma descrição detalhada do contexto e cena em apenas 1 frase curta.\n Para complementar sua análise também estou fornecendo informações de localidade da imagem: {location_info}",
             Part.from_data(image_base64, mime_type="image/png")
-        ],
-        generation_config=self.context_config)
-        
-        context_json = self._parse_json_response(context_response.text)
+        ]
+        context_json = self._generate_with_fallback(context_prompt, self.context_config)
         context_description = context_json.get('description', '')
         
         # Generate visual characteristics
-        visual_response = self.model.generate_content([
+        visual_prompt = [
             "Analise a imagem fornecida em base64 e liste as principais características visuais, incluindo cores, iluminação, composição e estilo. Cada item da lista deve ser apenas 1 palavra, como uma tag para um aplicativo de busca.  No máximo 5 TAGs",
             Part.from_data(image_base64, mime_type="image/png")
-        ],
-        generation_config=self.visual_config)
-        
-        visual_json = self._parse_json_response(visual_response.text)
+        ]
+        visual_json = self._generate_with_fallback(visual_prompt, self.visual_config)
         visual_characteristics = visual_json.get('characteristics', [])
         
         # Generate object annotations
-        object_response = self.model.generate_content([
+        object_prompt = [
             "Analise a imagem fornecida em base64 e liste os principais objetos e elementos visíveis. Cada item da lista deve ser apenas 1 palavra, como uma tag para um aplicativo de busca. No máximo 5 TAGs",
             Part.from_data(image_base64, mime_type="image/png")
-        ],
-        generation_config=self.object_config)
-        
-        object_json = self._parse_json_response(object_response.text)
+        ]
+        object_json = self._generate_with_fallback(object_prompt, self.object_config)
         object_annotations = object_json.get('objects', [])
         
         # Process location information if provided
